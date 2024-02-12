@@ -1,0 +1,12 @@
+.directory
+.settings/
+.~lock*
+.cache.mk
+build*/
+.vscode/
+*.code-workspace
+.venv/
+.ipynb_checkpoints/
+CMakeLists.txt.user
+libfilters.a
+libfilters.so
