@@ -1,13 +1,14 @@
-#include "ukf.h"
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-#include <pybind11/eigen.h>
+#include "bind_ukf.h"
+// #include "ukf.h"
+// #include <pybind11/pybind11.h>
+// #include <pybind11/numpy.h>
+// #include <pybind11/eigen.h>
 namespace py = pybind11;
 
 class BindUkf
 {
 private:
-    unscent_filter uf;
+    unscent_filter<> uf;
     
 public:
     MatrixXd predUkf(MatrixXd &X)
@@ -20,8 +21,7 @@ public:
     }
 };
 
-// void bind_ukf(py::module &m)
-PYBIND11_MODULE(estimator,m)
+void bind_ukf(pybind11::module &m)
 {
     py::class_<BindUkf>(m, "BindUkf")
         .def(py::init<>())

@@ -2,39 +2,31 @@
 
 #include "ukf.h"
 #include "utils.h"
-#include <boost/math/distributions/chi_squared.hpp>
 
-std::map<double, double> w;
-std::map<double, Eigen::MatrixXd> Xue;
-
-MatrixXd P = MatrixXd::Zero(6, 6);
-Predict predictStruct;
-Correct correct_struct;
-
-double sa = 0.5;       // СКО ускорения
-
-Matrix3d R_sph_rad;
-Matrix3d R_sph_deg;
-double dispRgn_R = 1.0; // дисперс. в рад.
-double dispAz_R_rad = 1e-4; //
-double dispUm_R_rad = 1e-4; //
-
-unscent_filter::unscent_filter()
+template <class M> 
+unscent_filter<M>::unscent_filter()
 {
+    dispRgn_R = 1.0;     // дисперс. в рад.
+    dispAz_R_rad = 1e-4; //
+    dispUm_R_rad = 1e-4; //
+    R_sph_rad.resize(3,3);
     R_sph_rad << (dispRgn_R), 0.0, 0.0, // известная ковариационная матрица ошибок измерении (СКО измерении).// ОШИБКИ ДОЛЖНЫ БЫТЬ ИЗВЕСТНЫМИ(ОШИБКИ ДАТЧИКОВ)
-    0.0, (dispAz_R_rad), 0.0,
-    0.0, 0.0, (dispUm_R_rad);
-
+        0.0, (dispAz_R_rad), 0.0,
+        0.0, 0.0, (dispUm_R_rad);
+    
     R_sph_deg << (dispRgn_R), 0.0, 0.0, // известная ковариационная матрица ошибок измерении (СКО измерении).// ОШИБКИ ДОЛЖНЫ БЫТЬ ИЗВЕСТНЫМИ(ОШИБКИ ДАТЧИКОВ)
-    0.0, (dispAz_R_rad * (180/M_PI)), 0.0,
-    0.0, 0.0, (dispUm_R_rad * (180/M_PI));
+        0.0, (dispAz_R_rad * (180 / M_PI)), 0.0,
+        0.0, 0.0, (dispUm_R_rad * (180 / M_PI));
+
+    sa = 0.5;
 }
-unscent_filter::~unscent_filter()
+template <class M> 
+unscent_filter<M>::~unscent_filter()
 {
-
 }
 
-MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время инициализации КФ, начальный вектор состояния = первому измерению.
+template <class M> 
+M unscent_filter<M>::predictUkf(const M X) // во время инициализации КФ, начальный вектор состояния = первому измерению.
 {   
     // cout << " \nPREDICT FUNCTION\n ";
     // cout << "\n X = " << X << endl;
@@ -42,17 +34,17 @@ MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время ини�
     double kappa = 1.0;
     double T = 6.0;
     Cv structCv;
-    MatrixXd F(6, 6); // матрица процесса (state transition matrix). (F*x(k-1)) — это как раз модель эволюции процесса.
-    MatrixXd G(6, 3); // матрица пересчета случайного воздействия в пространство траекторных параметров
-    Matrix3d Q;       // матрица ковариационных ошибок (шумовое влияние)
+    M F(6, 6); // матрица процесса (state transition matrix). (F*x(k-1)) — это как раз модель эволюции процесса.
+    M G(6, 3); // матрица пересчета случайного воздействия в пространство траекторных параметров
+    M Q (3,3);       // матрица ковариационных ошибок (шумовое влияние)
 
     if (P.isZero())
     {
         double r_meas = sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2) + pow(X(4, 0), 2));
         double az_meas =  atan2(X(2, 0), X(0, 0)) * (180/M_PI);
         double um_meas = atan2(X(4, 0), sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2))) * (180/M_PI);
-  
-        P = utils::do_cart_P(utils::sph2cartcov(R_sph_deg, r_meas, az_meas, um_meas));
+        Utils<> func;
+        P = func.do_cart_P(func.sph2cartcov(R_sph_deg, r_meas, az_meas, um_meas));
     }
 
     F << 1.0, T, 0.0, 0.0, 0.0, 0.0,  // первая строка - уравнение движения (x)
@@ -75,19 +67,19 @@ MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время ини�
 
     //-----------ВЗЯТИЕ МАТРИЧНОГО КОРНЯ-----------------
 
-    Eigen::LLT<Eigen::MatrixXd> lltofP(P);
+    Eigen::LLT<M> lltofP(P);
     if (lltofP.info() != Eigen::Success)
     {
         cout << " cholesky decomposition ERROR "; // необходима проверка матриц. чтобы не было вырождения
     }
     double n = P.cols(); // Количество сигма-векторов (столбцов в U) n равно количеству столбцов в матрице ковариации ошибок
-    Eigen::MatrixXd U;
-    Eigen::MatrixXd L = lltofP.matrixL();
+    M U;
+    M L = lltofP.matrixL();
     U = sqrt(n + kappa) * L; // Масшатбирующий коэффициент умноженный на Матричный корень
     cout << "\nU = " << U << endl;
 
     // Создаем словарь Xu сигма-векторов
-    std::map<double, Eigen::MatrixXd> Xu;
+    std::map<double, M> Xu;
 
     // Первый компонент
     Xu[0] = X; // в качестве первого сигма вектора берется текущий вектор состояния.
@@ -126,7 +118,7 @@ MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время ини�
     // cout << "\nXue[0] = " << Xue[1] << endl;
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ----------
 
-    structCv.Xe = MatrixXd::Zero(X.rows(), X.cols());
+    structCv.Xe = M::Zero(X.rows(), X.cols());
 
     for (double i = 0; i < Xue.size(); i++)
     {
@@ -135,11 +127,11 @@ MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время ини�
     // cout << "\nstructCv.Xe = " << structCv.Xe << endl;
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ
 
-    structCv.Pe = MatrixXd::Zero(P.rows(), P.cols());
+    structCv.Pe = M::Zero(P.rows(), P.cols());
 
     for (double i = 0; i < Xue.size(); i++)
     {
-        Eigen::MatrixXd dX;
+        M dX;
         dX = Xue[i] - structCv.Xe;
         structCv.Pe = structCv.Pe + w[i] * dX * dX.transpose();
     }
@@ -151,21 +143,20 @@ MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время ини�
     //--------------------------------------------------------------------------------------------------
     Hcv structHcv;
 
-
     //----------ЭКСТРАПОЛИРОВАНЫЕ СИГМА-ВЕКТОРА ИЗМЕРЕНИЙ ПО НЕЛИНЕЙНЫМ ФУНКЦИЯМ------------------
 
-    std::map<double, Eigen::MatrixXd> Zue;
+    std::map<double, M> Zue;
 
     for (double i = 0; i < Xue.size(); i++)
     {
-        MatrixXd zTmp;
+        M zTmp;
         zTmp.resize(3, 1);
         zTmp << sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2) + pow(Xue[i](4, 0), 2)), atan2(Xue[i](2, 0), Xue[i](0, 0)), atan2(Xue[i](4, 0), sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2)));
         Zue[i] = zTmp;
     }
 
     //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА ИЗМЕРЕНИЙ (ОТМЕТКИ) ------------------
-    structHcv.Ze = MatrixXd::Zero(3, 1);
+    structHcv.Ze = M::Zero(3, 1);
     for (double i = 0; i < Zue.size(); i++)
     {
         structHcv.Ze = structHcv.Ze + (w[i] * Zue[i]);
@@ -173,10 +164,10 @@ MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время ини�
     // cout << "\nЭкстраполированная отметка Ze = " << structHcv.Ze << endl;
 
     //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА ИЗМЕРЕНИЙ
-    MatrixXd Pzz = Eigen::MatrixXd::Zero(3, 3);
+    M Pzz = M::Zero(3, 3);
     for (double i = 0; i < Zue.size(); i++)
     {
-        Eigen::MatrixXd v;
+        M v;
         v = Zue[i] - structHcv.Ze;
         Pzz = Pzz + w[i] * v * v.transpose();
     }
@@ -185,28 +176,29 @@ MatrixXd unscent_filter::predictUkf(const MatrixXd X) // во время ини�
     // cout << "\nstructHcv.Se = " << structHcv.Se << endl;
 
     //----------------------------------------------------------------------
-    structHcv.Pxz = MatrixXd::Zero(6, 3);
+    M Pxz = M::Zero(6, 3);
 
     for (double i = 0; i < Zue.size(); i++)
     {
-        MatrixXd dX = Xue[i] - structCv.Xe;
-        MatrixXd v = Zue[i] - structHcv.Ze;
-        structHcv.Pxz = structHcv.Pxz + w[i] * dX * v.transpose();
+        M dX = Xue[i] - structCv.Xe;
+        M v = Zue[i] - structHcv.Ze;
+        Pxz = Pxz + w[i] * dX * v.transpose();
     }
 
-    MatrixXd K = structHcv.Pxz * structHcv.Se.inverse();
+    M K = Pxz * structHcv.Se.inverse();
 
     predictStruct.Xe = structCv.Xe;
     predictStruct.Pe = structCv.Pe;
     predictStruct.Ze = structHcv.Ze;
     predictStruct.Se = structHcv.Se;
     predictStruct.K = K;
-    MatrixXd X_p(6,1);
+    M X_p(6,1);
     X_p = predictStruct.Xe;
     return X_p;
 }
 
-MatrixXd unscent_filter::correctUkf(const MatrixXd Z)
+template <class M> 
+M unscent_filter<M>::unscent_filter::correctUkf(const M Z)
 {   
     // cout << " \nCORRECT FUNCTION\n ";
     // cout <<"predictStruct.Xe  = "<<predictStruct.Xe << endl;
@@ -214,20 +206,21 @@ MatrixXd unscent_filter::correctUkf(const MatrixXd Z)
     // cout <<"Z "<<Z << endl;
     // cout <<"predictStruct.Ze ="<<predictStruct.Ze << endl;
 
-    correct_struct.X = predictStruct.Xe + predictStruct.K * (Z - predictStruct.Ze); // Z - наблюдаемые измерения(полученные),
+    correctStruct.X = predictStruct.Xe + predictStruct.K * (Z - predictStruct.Ze); // Z - наблюдаемые измерения(полученные),
     // cout << "\npredictStruct.Xe = \n" << predictStruct.Xe << "\n + " << " \n K*(Z-Ze)\n"<< predictStruct.K * (Z - predictStruct.Ze);
     // cout << "\n K =\n"
     //      << predictStruct.K;
     // cout << "\n Z = \n"<<Z;
     // cout << "\n Ze = \n"<<predictStruct.Ze;
-    correct_struct.P = predictStruct.Pe - (predictStruct.K * predictStruct.Se) * predictStruct.K.transpose(); // по формуле
-    P = correct_struct.P;
+    correctStruct.P = predictStruct.Pe - (predictStruct.K * predictStruct.Se) * predictStruct.K.transpose(); // по формуле
+    P = correctStruct.P;
     // cout << "\nСкорректированный вектор состояния correct_struct.X = \n"
-    //      << correct_struct.X;
+    //      << correctStruct.X;
     // cout << "\nСкорректированная матрица ошибок correct_struct.P = \n " << correct_struct.P;
 
-    MatrixXd X_c(6,1);
-    X_c = correct_struct.X;
+    M X_c(6,1);
+    X_c = correctStruct.X;
     return X_c;
-
 }
+
+template class unscent_filter<MatrixXd>;

@@ -3,7 +3,7 @@
 option(ESTIMATOR_ADD_TESTS "Add estimator tests to CTest" ON)
 
 #### Добавление исполняемого файла ...#####################################
-set(sources_list_test test_ukf.cpp)
+set(sources_list_test test_estimators.cpp)
 add_executable(estimator_unit_tests ${sources_list_test})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -13,7 +13,7 @@ if(Threads_FOUND)
 else(message("---Threads not FOUND---"))
 endif(Threads_FOUND)
 
-#### Связывание библиотек eigen, Catch2 и libpoint_tmp  с ${PROJECT_NAME} и тестом ...#####################################
+#### Связывание библиотек eigen, Catch2 с ${PROJECT_NAME} и тестом ...#####################################
 target_link_libraries(estimator_unit_tests PRIVATE Catch2 eigen filters)
 
 #### Добавление тестов ...#####################################
