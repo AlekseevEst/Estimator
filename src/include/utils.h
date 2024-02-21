@@ -123,7 +123,7 @@ template <class M>
 M Utils<M>::RSph2Rcart(const M &R)
 {
 
-    M R_sph_deg(R.rows, R.cols);
+    M R_sph_deg(R.rows(), R.cols());
     double dispRgn_R = R(0, 0);
     double dispAz_R_rad = R(1, 1);
     double dispUm_R_rad = R(2, 2);

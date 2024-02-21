@@ -177,8 +177,15 @@ for i in range(Z.shape[1]):
     z = Z[0] * np.sin(Z[2])
 Z_cart = np.vstack((x,y,z))
 
+
+
+def make_est(X,P,Z,t,Q,R,k):
+    ukf = estimator.BindUkf(X,P,Z,t,Q,R,k)
+    return ukf
+
+ukf =make_est()
+
 def estimate (Z):
-    ukf = estimator.BindUkf()
 
     X_c = np.zeros((6, 1))
     for i in range (Z.shape[1]-1):
@@ -189,7 +196,9 @@ def estimate (Z):
         X = ukf.correctUkf(Z[:,i+1])
         X_c = np.hstack((X_c, X))
     # print("\nX_correct", X_c)
-    return X_c  
+    return X_c 
+
+
 X_c = estimate(Z)
 
 plt.figure()

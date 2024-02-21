@@ -14,7 +14,7 @@ template <class M,
                 template <typename> class StateFunc,
                 template <typename> class MeasurementFunc>
 
-struct UnscentKalmanfilter
+struct UnscentedKalmanfilter
 {
     private:
 
@@ -27,25 +27,25 @@ struct UnscentKalmanfilter
     MeasurementFunc<M> measFunc; 
 
     M state;
-    M stateCovariance;
+    // M stateCovariance;
     M measurement;
     M predict(const M& X, const M& P);
     M correct(const M& Z);
-    UnscentKalmanfilter(M X, M Z,double t, M procNoise, M measNoiseMatRadian ,double koef): state(X), measurement(Z),T(t), UKfilterMath(stateCovariance,
-                                                                                             measNoiseMatRadian, procNoise , t, koef){}
-
+    UnscentedKalmanfilter(M X, M P, M Z,double t, M procNoise, M measNoiseMatRadian ,double koef): 
+                                                                                            state(X), measurement(Z),T(t),
+                                                                                            UKfilterMath(P,measNoiseMatRadian, procNoise, t, koef){}
 };
 
 template <class M,
           template <typename> class StateFunc,
           template <typename> class MeasurementFunc>
-M UnscentKalmanfilter<M, StateFunc, MeasurementFunc>::predict(const M& X, const M& P)
+
+M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict(const M& X, const M& P)
 {
-    M make_P_cart(const M &P, const M &X);
-    M rootMat = UKfilterMath.sqrt_matrix_p(P);
-    
+    M P_cart = UKfilterMath.make_P_cart(P,X);
+    M rootMat = UKfilterMath.sqrt_matrix_p(P_cart);
     std::vector<M> sigmaVectors = UKfilterMath.doSigmaVectors(state,rootMat);
-    std::vector<M> weightVectors = UKfilterMath.calculationVectorWeights();
+    std::vector<double> weightVectors = UKfilterMath.calculationVectorWeights();
     std::vector<M> ExtrapolatedSigmaVectors = stateFunc(sigmaVectors,T);
     UKfilterMath.doExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
     UKfilterMath.doCovMatExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
@@ -60,7 +60,7 @@ M UnscentKalmanfilter<M, StateFunc, MeasurementFunc>::predict(const M& X, const 
 template <class M,
           template <typename> class StateFunc,
           template <typename> class MeasurementFunc>
-M UnscentKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
+M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
 {   
     M correctState = UKfilterMath.correctState(Z);
     M correctCov = UKfilterMath.correctCov();

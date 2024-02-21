@@ -19,15 +19,15 @@ struct UnscentedKalmanFilterMath
 
     UnscentedKalmanFilterMath(const M &covMat, const M &measNoiseMatRadian, const M &procNoise, double T, double &k);
     M make_P_cart(const M &P, const M &X);
-    M sqrt_matrix_p(const M &covMat, const M &X);
+    M sqrt_matrix_p(const M &covMat);
     std::vector<M> doSigmaVectors(const M &X,const M &U);
-    std::vector<M> calculationVectorWeights();
-    void doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<M> w);
-    void doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<M> w, const M &Q);
+    std::vector<double> calculationVectorWeights();
+    void doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<double> w);
+    void doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<double> w);
     std::vector<M> doSigmaVectorsSph(const std::vector<M> &Xue);
-    void doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<M> w);
-    void doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<M> w);
-    void calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<M> w);
+    void doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
+    void doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
+    void calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<double> w);
     M correctState(const M& Z);
     M correctCov();
 
@@ -62,7 +62,7 @@ M UnscentedKalmanFilterMath<M>::make_P_cart(const M &P, const M &X)
 
 
 template <class M>
-M UnscentedKalmanFilterMath<M>::sqrt_matrix_p(const M &covMat, const M &X)
+M UnscentedKalmanFilterMath<M>::sqrt_matrix_p(const M &covMat)
 {
 // -----------ВЗЯТИЕ МАТРИЧНОГО КОРНЯ----------------
 
@@ -102,11 +102,11 @@ std::vector<M> UnscentedKalmanFilterMath<M>::doSigmaVectors(const M &X, const M 
 }
 
 template <class M>
-std::vector<M> UnscentedKalmanFilterMath<M>::calculationVectorWeights()
+std::vector<double> UnscentedKalmanFilterMath<M>::calculationVectorWeights()
 {
     // ------------РАСЧЕТ ВЕСОВ ВЕКТОРОВ--------------
 
-    std::vector<M> w(n);
+    std::vector<double> w(n);
 
     w[0] = kappa / (n + kappa);
 
@@ -119,7 +119,7 @@ std::vector<M> UnscentedKalmanFilterMath<M>::calculationVectorWeights()
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<M> w)
+void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<double> w)
 {
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ----------
 
@@ -132,7 +132,7 @@ void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(std::vector<M> &Xue
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<M> w , const M &Q)
+void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<double> w)
 {
 
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ
@@ -144,7 +144,7 @@ void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const std::ve
         M dX = Xue[i] - predictStruct.Xe;
         predictStruct.Pe = predictStruct.Pe + w[i] * dX * dX.transpose();
     }
-    predictStruct.Pe = predictStruct.Pe + Utils<M>::doMatrixProcNoise_Q(Q, t);
+    predictStruct.Pe = predictStruct.Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
 }
 
 template <class M>
@@ -164,7 +164,7 @@ std::vector<M> UnscentedKalmanFilterMath<M>::doSigmaVectorsSph(const std::vector
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<M> w)
+void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w)
 {
     //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СФЕР.  ------------------
     predictStruct.Ze = M::Zero(3, 1);
@@ -175,7 +175,7 @@ void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVectorSph(const std::vecto
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<M> w)
+void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w)
 {
     //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СФЕР.
     M Pzz = M::Zero(Zue[0].rows(), Zue[0].rows());
@@ -191,7 +191,7 @@ void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVectorSph(const std:
 //----------------------------------------------------------------------
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<M> w)
+void UnscentedKalmanFilterMath<M>::calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<double> w)
 {
     M Pxz = M::Zero(Xue[0].rows(), Zue[0].rows());
 
