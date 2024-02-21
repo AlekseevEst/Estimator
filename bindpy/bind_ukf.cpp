@@ -1,32 +1,37 @@
 #include "bind_ukf.h"
-// #include "ukf.h"
-// #include <pybind11/pybind11.h>
-// #include <pybind11/numpy.h>
-// #include <pybind11/eigen.h>
+
 namespace py = pybind11;
 
 class BindUkf
 {
 private:
-    unscent_filter<> uf;
-    
+
 public:
-    MatrixXd predUkf(MatrixXd &X)
+
+    UnscentKalmanfilter<Eigen::MatrixXd,FuncConstVel,FuncMeasSph> ukf;
+    
+    // BindUkf()
+    // {
+
+    // }
+
+    Eigen::MatrixXd predUkf(Eigen::MatrixXd &X, Eigen::MatrixXd &P)
     {
-        return uf.predictUkf(X);
+        // return ukf.predict(X,P);
+        
     }
-    MatrixXd corrUkf(MatrixXd &Z)
+    Eigen::MatrixXd corrUkf(Eigen::MatrixXd &Z)
     {
-       return uf.correctUkf(Z);
+    //    return ukf.correctUkf(Z);
     }
 };
 
 void bind_ukf(pybind11::module &m)
 {
-    py::class_<BindUkf>(m, "BindUkf")
-        .def(py::init<>())
-        .def("predictUkf",&BindUkf::predUkf)
-            // py::arg("X"))
-        .def("correctUkf",&BindUkf::corrUkf);
-            // py::arg("Z"));
+    // py::class_<BindUkf>(m, "BindUkf")
+    //     .def(py::init<>())
+    //     .def("predictUkf",&BindUkf::predUkf)
+    //         // py::arg("X"))
+    //     .def("correctUkf",&BindUkf::corrUkf);
+    //         // py::arg("Z"));
 }

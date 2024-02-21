@@ -2,44 +2,67 @@
 
 #include <array>
 #include <map>
-#include <iostream>
 #include <cmath>
 #include <vector>
+#include <iostream>
 #include <boost/math/distributions/chi_squared.hpp>
 #include "utils.h"
-#include "structs.h"
-using namespace std;
-using namespace Eigen;
+#include "models.h"
+#include "ukfMath.h"
 
-// Хорошо, но давай чуть переделаем. Повысим читаемость.
-// template <class M = MatrixXd> class unscent_filter {....}
-// В классе не должно фигурировать тип матрицы, везде
+template <class M,
+                template <typename> class StateFunc,
+                template <typename> class MeasurementFunc>
 
-template <class M = MatrixXd> class unscent_filter
+struct UnscentKalmanfilter
 {
+    private:
 
-public:
-    unscent_filter();
-    ~unscent_filter();
+    UnscentedKalmanFilterMath<M>  UKfilterMath;
+    
+    public:
 
-    M predictUkf(const M X);
-    M correctUkf(const M Z);
+    double T;
+    StateFunc<M> stateFunc;
+    MeasurementFunc<M> measFunc; 
 
-private:
+    M state;
+    M stateCovariance;
+    M measurement;
+    M predict(const M& X, const M& P);
+    M correct(const M& Z);
+    UnscentKalmanfilter(M X, M Z,double t, M procNoise, M measNoiseMatRadian ,double koef): state(X), measurement(Z),T(t), UKfilterMath(stateCovariance,
+                                                                                             measNoiseMatRadian, procNoise , t, koef){}
 
-    Predict predictStruct;
-    Correct correctStruct;
-
-    M P = M::Zero(6, 6);
-    M R_sph_rad = M::Zero(3, 3);;
-    M R_sph_deg = M::Zero(3, 3);;
-
-    double dispRgn_R; // дисперс. задается в рад.
-    double dispAz_R_rad;
-    double dispUm_R_rad;
-
-    double sa;
-
-    std::map<double, double> w;
-    std::map<double, M> Xue;
 };
+
+template <class M,
+          template <typename> class StateFunc,
+          template <typename> class MeasurementFunc>
+M UnscentKalmanfilter<M, StateFunc, MeasurementFunc>::predict(const M& X, const M& P)
+{
+    M make_P_cart(const M &P, const M &X);
+    M rootMat = UKfilterMath.sqrt_matrix_p(P);
+    
+    std::vector<M> sigmaVectors = UKfilterMath.doSigmaVectors(state,rootMat);
+    std::vector<M> weightVectors = UKfilterMath.calculationVectorWeights();
+    std::vector<M> ExtrapolatedSigmaVectors = stateFunc(sigmaVectors,T);
+    UKfilterMath.doExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
+    UKfilterMath.doCovMatExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
+    std::vector<M> ExtrapolatedSigmaVectorsSph = UKfilterMath.doSigmaVectorsSph(ExtrapolatedSigmaVectors);
+    UKfilterMath.doExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
+    UKfilterMath.doCovMatExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
+    UKfilterMath.calcGainFilter(ExtrapolatedSigmaVectors, ExtrapolatedSigmaVectorsSph, weightVectors);
+
+    return UKfilterMath.predictStruct.Xe;
+}
+
+template <class M,
+          template <typename> class StateFunc,
+          template <typename> class MeasurementFunc>
+M UnscentKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
+{   
+    M correctState = UKfilterMath.correctState(Z);
+    M correctCov = UKfilterMath.correctCov();
+    return correctState;
+}

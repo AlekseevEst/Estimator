@@ -1,32 +1,25 @@
 #pragma once
-#include <Eigen/Dense>
 
-using MatrixType = Eigen::MatrixXd;
-// #include "utils.h"
-    struct Cv
-{
-    MatrixType Xe;
-    MatrixType Pe;
-};
-
-struct Hcv
-{
-    MatrixType Ze;
-    MatrixType Se;
-};
-
+template <class M>
 struct Predict
 {
-    MatrixType Xe;
-    MatrixType Pe;
-    MatrixType Se;
+    M Xe;
+    M Pe;
+    M Se;
 
-    MatrixType Ze;
-    MatrixType K;
+    M Ze;
+    M K;
 };
-
+template <class M>
 struct Correct
 {
-    MatrixType X;
-    MatrixType P;
+    M X;
+    M P;
+};
+
+struct Measurement
+{
+    double r_meas;
+    double az_meas;
+    double um_meas;
 };
