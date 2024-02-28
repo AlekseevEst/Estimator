@@ -17,8 +17,6 @@ public:
 private:
 };
 
-#include "utils.h"
-
 template <class M>
 M Utils<M>::rot_Z(const double &val)
 {
@@ -95,7 +93,6 @@ M Utils<M>::do_cart_P(std::pair<M, M> cartCov)
 template <class M>
 M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
 {
-
     M G (6,3);
     G << (T * T) / 2.0, 0.0, 0.0,
         T, 0.0, 0.0,
@@ -104,7 +101,7 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
         0.0, 0.0, (T * T) / 2.0,
         0.0, 0.0, T;
     
-    M Qp = G * Q * G.transpose();
+    M Qp = (G * Q) * G.transpose();
 
     return Qp;
 }
@@ -119,18 +116,26 @@ Measurement Utils<M>::make_Z0(const M &X)
     return MeasZ0;
 }
 
+
+enum class SphPos{
+
+    POS_RANGE = 0,
+    POS_AZIM,
+    POS_ELEV 
+    
+};
+
 template <class M>
 M Utils<M>::RSph2Rcart(const M &R)
 {
-
     M R_sph_deg(R.rows(), R.cols());
-    double dispRgn_R = R(0, 0);
-    double dispAz_R_rad = R(1, 1);
-    double dispUm_R_rad = R(2, 2);
+    double dispersRgn_R = R(static_cast<int>(SphPos::POS_RANGE), static_cast<int>(SphPos::POS_RANGE));
+    double dispersAz_R_rad = R(static_cast<int>(SphPos::POS_AZIM), static_cast<int>(SphPos::POS_AZIM));
+    double dispersUm_R_rad = R(static_cast<int>(SphPos::POS_ELEV), static_cast<int>(SphPos::POS_ELEV));
 
-    R_sph_deg << (dispRgn_R), 0.0, 0.0, // известная ковариационная матрица ошибок измерении (СКО измерении).// ОШИБКИ ДОЛЖНЫ БЫТЬ ИЗВЕСТНЫМИ(ОШИБКИ ДАТЧИКОВ)
-        0.0, (dispAz_R_rad * (180 / M_PI)), 0.0,
-        0.0, 0.0, (dispUm_R_rad * (180 / M_PI));
+    R_sph_deg << (dispersRgn_R), 0.0, 0.0, // известная ковариационная матрица ошибок измерении (СКО измерении).// ОШИБКИ ДОЛЖНЫ БЫТЬ ИЗВЕСТНЫМИ(ОШИБКИ ДАТЧИКОВ)
+        0.0, (dispersAz_R_rad * (180 / M_PI)), 0.0,
+        0.0, 0.0, (dispersUm_R_rad * (180 / M_PI));
 
     return R_sph_deg;
 }

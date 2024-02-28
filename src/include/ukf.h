@@ -26,30 +26,30 @@ struct UnscentedKalmanfilter
     StateFunc<M> stateFunc;
     MeasurementFunc<M> measFunc; 
 
-    M state;
+    // M state;
     // M stateCovariance;
     M measurement;
-    M predict(const M& X, const M& P);
+    M predict();
     M correct(const M& Z);
-    UnscentedKalmanfilter(M X, M P, M Z,double t, M procNoise, M measNoiseMatRadian ,double koef): 
-                                                                                            state(X), measurement(Z),T(t),
-                                                                                            UKfilterMath(P,measNoiseMatRadian, procNoise, t, koef){}
+    UnscentedKalmanfilter(const M& X, const M& Z, double t, const M& procNoise, const M& measNoiseMatRadian ,double koef): 
+                                                                                            measurement(Z),T(t),
+                                                                                            UKfilterMath(X,measNoiseMatRadian, procNoise, t, koef){}
 };
 
 template <class M,
           template <typename> class StateFunc,
           template <typename> class MeasurementFunc>
 
-M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict(const M& X, const M& P)
+M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict()
 {
-    M P_cart = UKfilterMath.make_P_cart(P,X);
-    M rootMat = UKfilterMath.sqrt_matrix_p(P_cart);
-    std::vector<M> sigmaVectors = UKfilterMath.doSigmaVectors(state,rootMat);
+    UKfilterMath.make_P_cart();
+    M rootMat = UKfilterMath.sqrt_matrix_p();
+    std::vector<M> sigmaVectors = UKfilterMath.doSigmaVectors(rootMat);
     std::vector<double> weightVectors = UKfilterMath.calculationVectorWeights();
     std::vector<M> ExtrapolatedSigmaVectors = stateFunc(sigmaVectors,T);
     UKfilterMath.doExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
     UKfilterMath.doCovMatExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
-    std::vector<M> ExtrapolatedSigmaVectorsSph = UKfilterMath.doSigmaVectorsSph(ExtrapolatedSigmaVectors);
+    std::vector<M> ExtrapolatedSigmaVectorsSph = UKfilterMath.doSigmaVectorsSph(ExtrapolatedSigmaVectors, measurement);
     UKfilterMath.doExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
     UKfilterMath.doCovMatExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
     UKfilterMath.calcGainFilter(ExtrapolatedSigmaVectors, ExtrapolatedSigmaVectorsSph, weightVectors);

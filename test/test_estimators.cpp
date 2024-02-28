@@ -6,22 +6,37 @@ using namespace Catch::Benchmark;
 
 TEST_CASE("filtering_ukf")
 {
-    // UnscentKalmanfilter<> uf;
-    // Eigen::MatrixXd X(6, 1);
-    // Eigen::MatrixXd Z(3, 1);
-    // X << -1255.5, 0.0, -18.039, 0.0, 18.0, 0.0; // тест нерабочий!!!
-    // Z << -1258.5, 3.119, 1.885;                 // тест нерабочий!!!
-    // CHECK(uf.predictUkf(X) == X);
-    // CHECK(uf.correctUkf(Z) == X);
 
-    // CHECK();
+
+    Eigen::MatrixXd X(6, 1);
+    Eigen::MatrixXd Z(3, 1);
+    Eigen::MatrixXd Q(3, 3);
+    Eigen::MatrixXd R(3, 3);
+    X << -1255.5, 0.0, -18.039, 0.0, 18.0, 0.0; // тест нерабочий!!!
+    Z << -1258.5, 3.119, 1.885;                 // тест нерабочий!!!
+    Q << 0.5,0.0,0.0,
+        0.0,0.5,0.0,
+        0.0,0.0,0.5;
+    R << 1.0,0.0,0.0,
+        0.0,1e-4,0.0,
+        0.0,0.0,1e-4;
+
+    double t = 6.0;
+    double k = 1.0;
+
+
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSph> ukf (X,Z,t,Q,R,k);
+    CHECK(ukf.predict() == X);
+    CHECK(ukf.correct(Z) == X);
+
     BENCHMARK("ESTIMATOR"){
-        // uf.predictUkf(X);
+        ukf.predict();
+        ukf.correct(Z);
     };
 }
 
-TEST_CASE("filtering_ekf")
-{
+// TEST_CASE("filtering_ekf")
+// {
     // ExtendedKalmanFilter<> ekf;
     // Eigen::MatrixXd X(6, 1);
     // Eigen::MatrixXd Z(3, 1);
@@ -31,7 +46,7 @@ TEST_CASE("filtering_ekf")
     // CHECK(ekf.correctEkf(Z) == X);
 
     // CHECK();
-    BENCHMARK("ESTIMATOR"){
+    // BENCHMARK("ESTIMATOR"){
         // ekf.predictEkf(X);
-    };
-}
+    // };
+// }

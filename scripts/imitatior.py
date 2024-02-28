@@ -6,8 +6,9 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 from scipy.stats import chi2, poisson, uniform, norm
 from IPython.display import clear_output
+import random
 import estimator
-seednumber=2024
+
 dt = 6.0
 R = np.diag([1.0, 1e-4, 1e-4]) # в рад задается
 plt.rcParams['figure.figsize'] = [10, 6]
@@ -17,14 +18,14 @@ class Target():
     """
     target model description
     """
-    def __init__(self, seed = 2024):
+    def __init__(self):
         self.targetState = {                                   # state vector
             'x':0.0,'vx':0.0,'ax':0.0, # x states
             'y':0.0,'vy':0.0,'ay':0.0, # y states
             'z':0.0,'vz':0.0,'az':0.0, # z states
             'w':0.0} # angle velocity
 
-        self.rand_gen = np.random.default_rng(seed)           # set seed for random numbers
+        self.rand_gen = np.random.default_rng()           # set seed for random numbers
         
     def init_state(self,state):
         initKeys = state.keys()                               # init targetState components
@@ -88,8 +89,10 @@ class Target():
         return {k:self.targetState[k] for k in self.targetState.keys()}
     
 
+# =============== Блок 1 ===================
+    
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
-tg1 = Target(2024)
+tg1 = Target()
 tg1.init_state({'x':500.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0}) # к ключам добавить ax и ay будет модель CA
 #tg1.init_process_noise({'ax':0.0,'ay':0.0}) # при нулях ax и ay воздействия на цель не будет. будет прямая траектория.
 
@@ -110,15 +113,16 @@ def plot_xy(tg1, Pd = 1.0, xmk=[], ymk=[]): #при pd = 1 пропусков н
     X_true_data = np.array([x1,vx1,y1,vy1,z1,vz1])        
 
     # print("X_true_data", X_true_data)
-    plt.figure()
-    plt.plot(X_true_data[0], X_true_data[2], 'x')
-    plt.title('X  Y')
+
+    # plt.figure()
+    # plt.plot(X_true_data[0], X_true_data[2], 'x')
+    # plt.title('X  Y')
     
-    plt.figure()
-    plt.plot(X_true_data[0], X_true_data[4], 'gx')
-    plt.title('X  Z')
+    # plt.figure()
+    # plt.plot(X_true_data[0], X_true_data[4], 'gx')
+    # plt.title('X  Z')
    
-    plt.show()
+    # plt.show()
 
     # Создаем трехмерный scatter plot для массива
     scatter1 = go.Scatter3d(x=X_true_data[0], y=X_true_data[2], z=X_true_data[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
@@ -132,6 +136,8 @@ def plot_xy(tg1, Pd = 1.0, xmk=[], ymk=[]): #при pd = 1 пропусков н
 
 x,y,z, X_true_data = plot_xy(tg1,1)
 
+
+# ================= Блок 2 =================
 r = np.sqrt(np.array(x)**2 + np.array(y)**2 + np.array(z)**2)
 az = np.arctan2(np.array(y),np.array(x)) # Азимут
 um = np.arctan2(np.array(z),np.sqrt(np.array(x)**2+np.array(y)**2)) # Угол места
@@ -151,6 +157,7 @@ Q = G@Qp@G.T
 def add_process_noise(X, Var):
     X_true_plus_noise = X + np.sqrt(Var) @ np.random.normal(loc=0, scale=1.0, size=(X.shape[0], X.shape[1]))
     return X_true_plus_noise
+
 X_true_plus_noise = add_process_noise(X_true_data, Q)
 plt.plot(X_true_plus_noise[0],X_true_plus_noise[2],"rx")
 # print("X_true+noise", X_true_plus_noise)
@@ -160,6 +167,8 @@ r_true_with_noise = np.sqrt(np.array(X_true_plus_noise[0])**2 + np.array(X_true_
 az_true_with_noise = np.arctan2(np.array(X_true_plus_noise[2]),np.array(X_true_plus_noise[0])) # Азимут
 um_true_with_noise = np.arctan2(np.array(X_true_plus_noise[4]),np.sqrt(np.array(X_true_plus_noise[0])**2+np.array(X_true_plus_noise[2])**2)) # Угол места
 
+
+# ================= Блок 3 =====================
 def do_measurement(X,R):
     Zm = np.zeros((R.shape[0], X.shape[1]))
     for i in range(Zm.shape[1]):
@@ -170,42 +179,45 @@ def do_measurement(X,R):
     Z_plus_noise = Zm + np.sqrt(R) @ np.random.normal(loc=0, scale=math.sqrt(1.0), size=(Zm.shape[0], Zm.shape[1]))
     return Z_plus_noise
 Z = do_measurement (X_true_plus_noise,R)
-print ("Z=", Z)
-for i in range(Z.shape[1]):
-    x = Z[0] * np.cos(Z[1]) * np.cos(Z[2])
-    y = Z[0] * np.sin(Z[1]) * np.cos(Z[2])
-    z = Z[0] * np.sin(Z[2])
-Z_cart = np.vstack((x,y,z))
+# print ("Z=", Z)
+
+def Zsph2cart(Z):
+    for i in range(Z.shape[1]):
+        x = Z[0] * np.cos(Z[1]) * np.cos(Z[2])
+        y = Z[0] * np.sin(Z[1]) * np.cos(Z[2])
+        z = Z[0] * np.sin(Z[2])
+    Z_cart = np.vstack((x,y,z))
+    return Z_cart
 
 
-
-def make_est(X,P,Z,t,Q,R,k):
-    ukf = estimator.BindUkf(X,P,Z,t,Q,R,k)
-    return ukf
-
-ukf =make_est()
-
+# ================= Блок 4 ===================
+k = 1.0
 def estimate (Z):
+    Z_cart = Zsph2cart(Z)
+    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
+    Z0 = np.vstack([Z[0,0], Z[1,0], Z[2,0]])
 
+
+    ukf = estimator.BindUkf(X0,Z0,dt,Qp,R,k) #инициал. фильтра
     X_c = np.zeros((6, 1))
     for i in range (Z.shape[1]-1):
-        if i == 0:
-            X = [[Z[0,0] * np.cos(Z[1,0]) * np.cos(Z[2,0])], [0.], [Z[0,0] * np.sin(Z[1,0]) * np.cos(Z[2,0])],[0.], [Z[0,0] * np.sin(Z[2,0])],[0.]] # инициализируем вектор состояния, равный первому измерению
-            X_c = X
-        _ = ukf.predictUkf(X)
+        _ = ukf.predictUkf()
         X = ukf.correctUkf(Z[:,i+1])
         X_c = np.hstack((X_c, X))
-    # print("\nX_correct", X_c)
     return X_c 
-
 
 X_c = estimate(Z)
 
+Z_cart = Zsph2cart(Z)
 plt.figure()
 plt.plot(X_c[0],X_c[2], label='Correct', marker='o')
 plt.plot(X_true_plus_noise[0],X_true_plus_noise[2], label='truth', marker='x')
 plt.plot(Z_cart[0],Z_cart[1], label='Meas')
 plt.legend()
+
+
+# ================= Блок 5 ===================
+# СБОР СТАТИСТИКИ
 
 def calc_err(X):
     Xn = add_process_noise(X, Q)
@@ -217,7 +229,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 12
+    num_iterations = 2000
     var_err = np.zeros((X.shape[0], X.shape[1]))
 
     for i in tqdm(range(num_iterations)):
