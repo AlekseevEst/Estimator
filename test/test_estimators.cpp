@@ -12,8 +12,9 @@ TEST_CASE("filtering_ukf")
     Eigen::MatrixXd Z(3, 1);
     Eigen::MatrixXd Q(3, 3);
     Eigen::MatrixXd R(3, 3);
-    X << -1255.5, 0.0, -18.039, 0.0, 18.0, 0.0; // тест нерабочий!!!
-    Z << -1258.5, 3.119, 1.885;                 // тест нерабочий!!!
+    X << 1700.24, 0.0, 17.01, 0.0, 17.02, 0.0;
+    Z << 2888.5, 1e-02, 1e-02;                 
+
     Q << 0.5,0.0,0.0,
         0.0,0.5,0.0,
         0.0,0.0,0.5;
@@ -24,13 +25,14 @@ TEST_CASE("filtering_ukf")
     double t = 6.0;
     double k = 1.0;
 
+    Eigen::MatrixXd x_check(6,1);
+    x_check << 2.88476682e+03, 1.97394641e+02, 2.90383652e+01, 2.00563475e+00, 2.90209862e+01, 2.00259655e+00;
 
     UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSph> ukf (X,Z,t,Q,R,k);
-    CHECK(ukf.predict() == X);
-    CHECK(ukf.correct(Z) == X);
+    ukf.predict();
+    CHECK(ukf.correct(Z).isApprox(x_check, 1.0));
 
     BENCHMARK("ESTIMATOR"){
-        ukf.predict();
         ukf.correct(Z);
     };
 }

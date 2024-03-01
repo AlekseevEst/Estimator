@@ -54,7 +54,6 @@ void UnscentedKalmanFilterMath<M>::make_P_cart()
         M R_sph_deg = Utils<M>::RSph2Rcart(R_sph_rad);
         Measurement measZ0 = Utils<M>::make_Z0(X);
         P = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas));
-
     }
 
 }

@@ -9,6 +9,7 @@ from IPython.display import clear_output
 import random
 import estimator
 
+# dt = 6.0
 dt = 6.0
 R = np.diag([1.0, 1e-4, 1e-4]) # в рад задается
 plt.rcParams['figure.figsize'] = [10, 6]
@@ -199,7 +200,7 @@ def estimate (Z):
 
 
     ukf = estimator.BindUkf(X0,Z0,dt,Qp,R,k) #инициал. фильтра
-    X_c = np.zeros((6, 1))
+    X_c = X0    # массив откоректированных значений записывается первая отметка.
     for i in range (Z.shape[1]-1):
         _ = ukf.predictUkf()
         X = ukf.correctUkf(Z[:,i+1])
@@ -223,14 +224,14 @@ def calc_err(X):
     Xn = add_process_noise(X, Q)
     Zn = do_measurement(Xn, R)
     X_c = estimate(Zn)
-    err = X_c  - Xn
+    err = X_c[:,1:]  - Xn [:,1:] # ошибка вычисляется со второго столбца.
     return err
 
 from tqdm import tqdm
 
 def calc_std_err(X):
     num_iterations = 2000
-    var_err = np.zeros((X.shape[0], X.shape[1]))
+    var_err = np.zeros((X.shape[0], X.shape[1]-1)) # минус один столбец, так как ошибка вычисляется со 2-го столбца.
 
     for i in tqdm(range(num_iterations)):
         err = calc_err(X)
