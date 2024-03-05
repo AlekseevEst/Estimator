@@ -12,17 +12,16 @@ private:
 public:
     
         BindUkf(Eigen::MatrixXd state,
-                Eigen::MatrixXd measurement,
                 double t,
                 Eigen::MatrixXd processNoise,
                 Eigen::MatrixXd measureNoise,
                 double k):              
-                          ukf(state,measurement,t,processNoise,measureNoise,k){}
+                          ukf(state,t,processNoise,measureNoise,k){}
                               
 
-    Eigen::MatrixXd predUkf()
+    Eigen::MatrixXd predUkf(Eigen::MatrixXd &Z)
     {
-        return ukf.predict();
+        return ukf.predict(Z);
     }
     Eigen::MatrixXd corrUkf(Eigen::MatrixXd &Z)
     {
@@ -33,7 +32,7 @@ public:
 void bind_ukf(pybind11::module &m)
 {
     py::class_<BindUkf>(m, "BindUkf")
-        .def(py::init<const Eigen::MatrixXd&, const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, double>())
+        .def(py::init<const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, double>())
         .def("predictUkf",&BindUkf::predUkf)
             // py::arg("X"))
         .def("correctUkf",&BindUkf::corrUkf);

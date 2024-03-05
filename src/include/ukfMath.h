@@ -11,6 +11,7 @@ struct UnscentedKalmanFilterMath
     M P;
     M R_sph_rad;
     M Q;
+    M U;
     size_t n;
     double kappa;
     double t;
@@ -19,12 +20,13 @@ struct UnscentedKalmanFilterMath
 
     UnscentedKalmanFilterMath(const M &state, const M &measNoiseMatRadian, const M &procNoise, double T, double &k);
     void make_P_cart();
-    M sqrt_matrix_p();
-    std::vector<M> doSigmaVectors(const M &U);
+    void sqrt_matrix_p();
+    std::vector<M> doSigmaVectors();
     std::vector<double> calculationVectorWeights();
     void doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<double> w);
     void doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<double> w);
-    std::vector<M> doSigmaVectorsSph(const std::vector<M> &Xue, const M& measurement);
+    
+    // std::vector<M> doSigmaVectorsSph(const std::vector<M> &Xue, const M& measurement);
     void doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
     void doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
     void calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<double> w);
@@ -49,40 +51,37 @@ UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &state, const M 
 template <class M>
 void UnscentedKalmanFilterMath<M>::make_P_cart()
 {  
+
     if (P.isZero())
     {
-        M R_sph_deg = Utils<M>::RSph2Rcart(R_sph_rad);
+        M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
         Measurement measZ0 = Utils<M>::make_Z0(X);
         P = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas));
     }
 
 }
 
-
 template <class M>
-M UnscentedKalmanFilterMath<M>::sqrt_matrix_p()
+void UnscentedKalmanFilterMath<M>::sqrt_matrix_p()
 {
 // -----------ВЗЯТИЕ МАТРИЧНОГО КОРНЯ----------------
     Eigen::LLT<M>lltofP(P);
     if (lltofP.info() != Eigen::Success)
     {
-        std::cout << " cholesky decomposition ERROR "; // необходима проверка матриц. чтобы не было вырождения
+        throw std::runtime_error("cholesky decomposition ERROR");
     }
-    
     M L = lltofP.matrixL();
-    M U = sqrt(n + kappa) * L; // Масшатбирующий коэффициент умноженный на Матричный корень
-    return U;
+    U = sqrt(n + kappa) * L; // Масшатбирующий коэффициент умноженный на Матричный корень
 }
 
 template <class M>
-std::vector<M> UnscentedKalmanFilterMath<M>::doSigmaVectors(const M &U)
+std::vector<M> UnscentedKalmanFilterMath<M>::doSigmaVectors()
 {
     //----------СОЗДАЕМ Xu СИГМА-ВЕКТОРОВ------------------
     std::vector<M> Xu(2*n+1);
     // Первый компонент
     Xu[0] = X; // в качестве первого сигма вектора берется текущий вектор состояния.
-    // std::cout<<"n = "<<"\n"<<n<<std::endl;
-    // std::cout<<"Xu[0] = "<<"\n"<<Xu[0]<<std::endl;
+
     // Второй компонент. В качестве n/2 берется сумма среднего и некоторого отклонения U.col(i)
     for (int i = 0; i < n; i++)
     {   
@@ -107,7 +106,7 @@ std::vector<double> UnscentedKalmanFilterMath<M>::calculationVectorWeights()
 
     for (int i = 0; i < 2 * n ; i++)
     {
-        w[i + 1] = 1.0 / (2.0 * (n + kappa));
+        w[i + 1] = 0.5 / (n + kappa);
     }
 
     return w;
@@ -137,7 +136,7 @@ void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const std::ve
     for (int i = 0; i < Xue.size(); i++)
     {
         M dX = Xue[i] - predictStruct.Xe;
-        predictStruct.Pe = predictStruct.Pe + w[i] * dX * dX.transpose();
+        predictStruct.Pe = predictStruct.Pe + w[i] * (dX * dX.transpose());
     }
 
     predictStruct.Pe = predictStruct.Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
@@ -145,29 +144,14 @@ void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const std::ve
 }
 
 template <class M>
-std::vector<M> UnscentedKalmanFilterMath<M>::doSigmaVectorsSph(const std::vector<M> &Xue, const M& measurement)
-{
-    //----------ЭКСТРАПОЛИРОВАНЫЕ СИГМА-ВЕКТОРА ИЗМЕРЕНИЙ ПО НЕЛИНЕЙНЫМ ФУНКЦИЯМ------------------
-
-    std::vector<M> Zue(Xue.size());
-
-    for (int i = 0; i < Xue.size(); i++)
-    {
-        M zTmp(measurement.rows(), measurement.cols());
-        zTmp << sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2) + pow(Xue[i](4, 0), 2)), atan2(Xue[i](2, 0), Xue[i](0, 0)), atan2(Xue[i](4, 0), sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2)));
-        Zue[i] = zTmp;
-    }
-    return Zue;
-}
-
-template <class M>
 void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w)
 {
     //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СФЕР.  ------------------
+
     predictStruct.Ze = M::Zero(Zue[0].rows(),Zue[0].cols());
     for (int i = 0; i < Zue.size(); i++)
-    {
-        predictStruct.Ze = predictStruct.Ze + (w[i] * Zue[i]);
+    {   
+        predictStruct.Ze = predictStruct.Ze + w[i] * Zue[i];
     }
 }
 
@@ -180,7 +164,7 @@ void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVectorSph(const std:
     {
         M v;
         v = Zue[i] - predictStruct.Ze;
-        Pzz = Pzz + w[i] * v * v.transpose();
+        Pzz = Pzz + w[i] * (v * v.transpose());
     }
     predictStruct.Se = Pzz + R_sph_rad;
 }
@@ -204,7 +188,10 @@ void UnscentedKalmanFilterMath<M>::calcGainFilter(const std::vector<M> &Xue, con
 
 template <class M>
 M UnscentedKalmanFilterMath<M>::correctState(const M& Z)
+    
 {   
+    // predictStruct.Ze(1,0) = Z(1,0) + Utils<M>::ComputeAngleDifference(predictStruct.Ze(1,0), Z(1,0));
+
     correctStruct.X = predictStruct.Xe + predictStruct.K * (Z - predictStruct.Ze);
     X = correctStruct.X; 
     // std::cout<< "\ncorrectStruct.X ="<<correctStruct.X<<std::endl;
@@ -216,7 +203,7 @@ M UnscentedKalmanFilterMath<M>::correctCov()
 {   
     correctStruct.P = predictStruct.Pe - (predictStruct.K * predictStruct.Se) * predictStruct.K.transpose();
 
-    if((correctStruct.P.transpose().isApprox(correctStruct.P, 1e-8)) && (correctStruct.P.llt().info() == Eigen::Success) && (correctStruct.P.determinant() !=0)) // проверка на симметричность, положительно определённость и не вырожденность
+    if(Utils<M>::СheckingСonditionsMat(correctStruct.P)) // проверка на симметричность, положительно определённость и не вырожденность
     {
         P = correctStruct.P;
     }

@@ -10,3 +10,6 @@ build*/
 CMakeLists.txt.user
 libfilters.a
 libfilters.so
+/scripts/estimator.cpython-39-x86_64-linux-gnu.so
+
+

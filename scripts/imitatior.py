@@ -112,26 +112,16 @@ def plot_xy(tg1, Pd = 1.0, xmk=[], ymk=[]): #при pd = 1 пропусков н
             vz1.append(state1['vz'])
 
     X_true_data = np.array([x1,vx1,y1,vy1,z1,vz1])        
+    # print(X_true_data)
 
-    # print("X_true_data", X_true_data)
-
-    # plt.figure()
-    # plt.plot(X_true_data[0], X_true_data[2], 'x')
-    # plt.title('X  Y')
-    
-    # plt.figure()
-    # plt.plot(X_true_data[0], X_true_data[4], 'gx')
-    # plt.title('X  Z')
-   
-    # plt.show()
 
     # Создаем трехмерный scatter plot для массива
-    scatter1 = go.Scatter3d(x=X_true_data[0], y=X_true_data[2], z=X_true_data[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
-    fig.add_trace(scatter1)
+    # scatter1 = go.Scatter3d(x=X_true_data[0], y=X_true_data[2], z=X_true_data[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
+    # fig.add_trace(scatter1)
 
-    # Обновляем параметры макета
-    fig.update_layout(scene=dict(aspectmode="cube"))
-    fig.show()
+    # # Обновляем параметры макета
+    # fig.update_layout(scene=dict(aspectmode="cube"))
+    # fig.show()
 
     return (x1,y1,z1,X_true_data)
 
@@ -139,9 +129,9 @@ x,y,z, X_true_data = plot_xy(tg1,1)
 
 
 # ================= Блок 2 =================
-r = np.sqrt(np.array(x)**2 + np.array(y)**2 + np.array(z)**2)
-az = np.arctan2(np.array(y),np.array(x)) # Азимут
-um = np.arctan2(np.array(z),np.sqrt(np.array(x)**2+np.array(y)**2)) # Угол места
+# r = np.sqrt(np.array(x)**2 + np.array(y)**2 + np.array(z)**2)
+# az = np.arctan2(np.array(y),np.array(x)) # Азимут
+# um = np.arctan2(np.array(z),np.sqrt(np.array(x)**2+np.array(y)**2)) # Угол места
 
 
 process_var = 0.5
@@ -160,7 +150,8 @@ def add_process_noise(X, Var):
     return X_true_plus_noise
 
 X_true_plus_noise = add_process_noise(X_true_data, Q)
-plt.plot(X_true_plus_noise[0],X_true_plus_noise[2],"rx")
+plt.plot(X_true_plus_noise[0],X_true_plus_noise[2], label='X_true_plus_ProcNoise', linestyle='-', marker='o')
+plt.legend()
 # print("X_true+noise", X_true_plus_noise)
 
 
@@ -170,6 +161,15 @@ um_true_with_noise = np.arctan2(np.array(X_true_plus_noise[4]),np.sqrt(np.array(
 
 
 # ================= Блок 3 =====================
+
+def Zsph2cart(Z):
+    for i in range(Z.shape[1]):
+        x = Z[0] * np.cos(Z[1]) * np.cos(Z[2])
+        y = Z[0] * np.sin(Z[1]) * np.cos(Z[2])
+        z = Z[0] * np.sin(Z[2])
+    Z_cart = np.vstack((x,y,z))
+    return Z_cart
+
 def do_measurement(X,R):
     Zm = np.zeros((R.shape[0], X.shape[1]))
     for i in range(Zm.shape[1]):
@@ -180,15 +180,11 @@ def do_measurement(X,R):
     Z_plus_noise = Zm + np.sqrt(R) @ np.random.normal(loc=0, scale=math.sqrt(1.0), size=(Zm.shape[0], Zm.shape[1]))
     return Z_plus_noise
 Z = do_measurement (X_true_plus_noise,R)
-# print ("Z=", Z)
 
-def Zsph2cart(Z):
-    for i in range(Z.shape[1]):
-        x = Z[0] * np.cos(Z[1]) * np.cos(Z[2])
-        y = Z[0] * np.sin(Z[1]) * np.cos(Z[2])
-        z = Z[0] * np.sin(Z[2])
-    Z_cart = np.vstack((x,y,z))
-    return Z_cart
+Zc = Zsph2cart(Z)
+plt.plot(Zc[0],Zc[1], label='do_meas', linestyle='-', marker='x')
+plt.legend()
+# print ("Z=", Z)
 
 
 # ================= Блок 4 ===================
@@ -196,24 +192,26 @@ k = 1.0
 def estimate (Z):
     Z_cart = Zsph2cart(Z)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
-    Z0 = np.vstack([Z[0,0], Z[1,0], Z[2,0]])
+    # Z0 = np.vstack([Z[0,0], Z[1,0], Z[2,0]])
 
 
-    ukf = estimator.BindUkf(X0,Z0,dt,Qp,R,k) #инициал. фильтра
-    X_c = X0    # массив откоректированных значений записывается первая отметка.
+    ukf = estimator.BindUkf(X0,dt,Qp,R,k) #инициал. фильтра
+    X_c = X0    # в массив откоректированных значений записывается первая отметка.
     for i in range (Z.shape[1]-1):
-        _ = ukf.predictUkf()
+        _ = ukf.predictUkf(Z[:,i+1])
         X = ukf.correctUkf(Z[:,i+1])
         X_c = np.hstack((X_c, X))
     return X_c 
 
 X_c = estimate(Z)
 
+
+
 Z_cart = Zsph2cart(Z)
 plt.figure()
-plt.plot(X_c[0],X_c[2], label='Correct', marker='o')
+plt.plot(X_c[0], X_c[2], label='Correct', marker='o')
 plt.plot(X_true_plus_noise[0],X_true_plus_noise[2], label='truth', marker='x')
-plt.plot(Z_cart[0],Z_cart[1], label='Meas')
+plt.plot(Z_cart[0], Z_cart[1], label='Meas')
 plt.legend()
 
 
@@ -224,13 +222,16 @@ def calc_err(X):
     Xn = add_process_noise(X, Q)
     Zn = do_measurement(Xn, R)
     X_c = estimate(Zn)
-    err = X_c[:,1:]  - Xn [:,1:] # ошибка вычисляется со второго столбца.
+    err = X_c[:,1:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
+
+    print(err[0])
+
     return err
 
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 2000
+    num_iterations = 1
     var_err = np.zeros((X.shape[0], X.shape[1]-1)) # минус один столбец, так как ошибка вычисляется со 2-го столбца.
 
     for i in tqdm(range(num_iterations)):

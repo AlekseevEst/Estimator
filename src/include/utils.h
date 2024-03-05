@@ -1,6 +1,8 @@
 #pragma once
 #include "Eigen/Dense"
 #include "structs.h"
+
+#define ENUM_TO_INT(x) static_cast<int>(x)
 template <class M> 
 class Utils
 {
@@ -12,7 +14,9 @@ public:
     static M do_cart_P(std::pair<M, M> cartCov);
     static M doMatrixNoiseProc_Q(M procVar, double T);
     static Measurement make_Z0(const M &X);
-    static M RSph2Rcart(const M &R);
+    static M RsphRad2RsphDeg(const M &R);
+    static double ComputeAngleDifference(double angle1, double angle2);
+    static bool СheckingСonditionsMat(const M& P);
 
 private:
 };
@@ -126,16 +130,34 @@ enum class SphPos{
 };
 
 template <class M>
-M Utils<M>::RSph2Rcart(const M &R)
+M Utils<M>::RsphRad2RsphDeg(const M &R)
 {
     M R_sph_deg(R.rows(), R.cols());
-    double dispersRgn_R = R(static_cast<int>(SphPos::POS_RANGE), static_cast<int>(SphPos::POS_RANGE));
-    double dispersAz_R_rad = R(static_cast<int>(SphPos::POS_AZIM), static_cast<int>(SphPos::POS_AZIM));
-    double dispersUm_R_rad = R(static_cast<int>(SphPos::POS_ELEV), static_cast<int>(SphPos::POS_ELEV));
+    double dispersRgn_R = R(ENUM_TO_INT(SphPos::POS_RANGE), ENUM_TO_INT(SphPos::POS_RANGE));
+    double dispersAz_R_rad = R(ENUM_TO_INT(SphPos::POS_AZIM), ENUM_TO_INT(SphPos::POS_AZIM));
+    double dispersUm_R_rad = R(ENUM_TO_INT(SphPos::POS_ELEV), ENUM_TO_INT(SphPos::POS_ELEV));
 
     R_sph_deg << (dispersRgn_R), 0.0, 0.0, // известная ковариационная матрица ошибок измерении (СКО измерении).// ОШИБКИ ДОЛЖНЫ БЫТЬ ИЗВЕСТНЫМИ(ОШИБКИ ДАТЧИКОВ)
         0.0, (dispersAz_R_rad * (180 / M_PI)), 0.0,
         0.0, 0.0, (dispersUm_R_rad * (180 / M_PI));
 
     return R_sph_deg;
+}
+
+
+template <class M>
+double Utils<M>::ComputeAngleDifference(double angle1, double angle2)
+{
+    double diff = std::arg(std::complex<double>(cos(angle1 - angle2), sin(angle1 - angle2)));
+    return diff;
+}
+
+template <class M>
+bool Utils<M>::СheckingСonditionsMat(const M& P)
+{
+    if((P.transpose().isApprox(P, 1e-8)) && (P.llt().info() == Eigen::Success) && (P.determinant() !=0))
+        return true;
+        else{
+            return false;
+        }
 }
