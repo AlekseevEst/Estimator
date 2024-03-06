@@ -12,6 +12,21 @@ enum class SizeMat {
 template <class M>
 struct FuncConstVel
 {
+        M operator()(M X, double T)
+    {
+        SizeMat rows = SizeMat::ROW6;
+        SizeMat cols = SizeMat::COL6;
+        M F(ENUM_TO_INT(rows),ENUM_TO_INT(cols));
+
+        F << 1.0, T, 0.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, T, 0.0, 0.0,
+            0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 1.0, T,
+            0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+        
+        return F*X;
+    }
 
     std::vector<M> operator()(std::vector<M> Xu, double T)
     {
@@ -32,16 +47,33 @@ struct FuncConstVel
         for (int i = 0; i < Xu.size(); i++)
         {
             Xue[i] = F * Xu[i]; 
-           
         }
         
         return Xue;
     }
 };
 
+
+
 template <class M>
 struct FuncMeasSph
 { 
+        M operator()(const M X, M Z)
+    {   
+        SizeMat rows = SizeMat::ROW3;
+        SizeMat cols = SizeMat::COL1;
+
+        double range = sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2) + pow(X(4, 0), 2));
+        double az = atan2(X(2, 0), X(0, 0));
+        double el = atan2(X(4, 0), sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2)));
+        
+        az =  Z(1,0) + Utils<M>::ComputeAngleDifference(az, Z(1,0));
+        M z (Z.rows(), Z.cols());
+        z << range,az,el;
+        return z;
+    }
+
+
     std::vector<M> operator()(const std::vector<M> Xue, M Z)
     {   
         SizeMat rows = SizeMat::ROW3;

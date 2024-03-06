@@ -26,7 +26,6 @@ struct UnscentedKalmanFilterMath
     void doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<double> w);
     void doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<double> w);
     
-    // std::vector<M> doSigmaVectorsSph(const std::vector<M> &Xue, const M& measurement);
     void doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
     void doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
     void calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<double> w);
@@ -65,12 +64,8 @@ template <class M>
 void UnscentedKalmanFilterMath<M>::sqrt_matrix_p()
 {
 // -----------ВЗЯТИЕ МАТРИЧНОГО КОРНЯ----------------
-    Eigen::LLT<M>lltofP(P);
-    if (lltofP.info() != Eigen::Success)
-    {
-        throw std::runtime_error("cholesky decomposition ERROR");
-    }
-    M L = lltofP.matrixL();
+
+    M L = Utils<M>::CholeskyLowerTriangularTransposition(P);
     U = sqrt(n + kappa) * L; // Масшатбирующий коэффициент умноженный на Матричный корень
 }
 

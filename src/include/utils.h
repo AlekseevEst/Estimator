@@ -16,6 +16,7 @@ public:
     static Measurement make_Z0(const M &X);
     static M RsphRad2RsphDeg(const M &R);
     static double ComputeAngleDifference(double angle1, double angle2);
+    static M CholeskyLowerTriangularTransposition(const M& P);
     static bool СheckingСonditionsMat(const M& P);
 
 private:
@@ -160,4 +161,15 @@ bool Utils<M>::СheckingСonditionsMat(const M& P)
         else{
             return false;
         }
+}
+template <class M>
+M Utils<M>::CholeskyLowerTriangularTransposition(const M& P)
+{
+     Eigen::LLT<M>lltofP(P);
+    if (lltofP.info() != Eigen::Success)
+    {
+        throw std::runtime_error("cholesky decomposition ERROR");
+    }
+    M L = lltofP.matrixL();
+    return L;
 }

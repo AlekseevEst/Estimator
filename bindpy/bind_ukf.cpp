@@ -19,9 +19,9 @@ public:
                           ukf(state,t,processNoise,measureNoise,k){}
                               
 
-    Eigen::MatrixXd predUkf(Eigen::MatrixXd &Z)
+    Eigen::MatrixXd predUkf()
     {
-        return ukf.predict(Z);
+        return ukf.predict();
     }
     Eigen::MatrixXd corrUkf(Eigen::MatrixXd &Z)
     {

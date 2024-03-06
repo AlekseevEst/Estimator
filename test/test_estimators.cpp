@@ -7,7 +7,6 @@ using namespace Catch::Benchmark;
 TEST_CASE("filtering_ukf")
 {
 
-
     Eigen::MatrixXd X(6, 1);
     Eigen::MatrixXd Z(3, 1);
     Eigen::MatrixXd Q(3, 3);
@@ -18,6 +17,7 @@ TEST_CASE("filtering_ukf")
     Q << 0.5,0.0,0.0,
         0.0,0.5,0.0,
         0.0,0.0,0.5;
+        
     R << 1.0,0.0,0.0,
         0.0,1e-4,0.0,
         0.0,0.0,1e-4;
@@ -28,7 +28,7 @@ TEST_CASE("filtering_ukf")
     Eigen::MatrixXd x_check(6,1);
     x_check << 2.88476682e+03, 1.97394641e+02, 2.90383652e+01, 2.00563475e+00, 2.90209862e+01, 2.00259655e+00;
 
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSph> ukf (X,Z,t,Q,R,k);
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSph> ukf (X,t,Q,R,k);
     ukf.predict();
     CHECK(ukf.correct(Z).isApprox(x_check, 1.0));
 

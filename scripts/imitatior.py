@@ -191,7 +191,7 @@ def estimate (Z):
     ukf = estimator.BindUkf(X0,dt,Qp,R,k) #инициал. фильтра
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
-        _ = ukf.predictUkf(Z[:,i+1])
+        _ = ukf.predictUkf()
         X = ukf.correctUkf(Z[:,i+1])
 
         X_c = np.append(X_c,X,axis=1)
@@ -204,7 +204,7 @@ def err1(X_c,X_true_plus_noise):
     er = X_c[:,:] - X_true_plus_noise [:,1:]
     return er
 e = err1(X_c,X_true_plus_noise)
-# print("e =", e[0]) #Распечатка ошибок по Х одной трассы
+print("e =", e[0]) #Распечатка ошибок по Х одной трассы
 
 
 Z_cart = Zsph2cart(Z)
@@ -219,13 +219,9 @@ plt.legend()
 # СБОР СТАТИСТИКИ
 
 def calc_err(X):
-    # print ("X_true", X)  все штатно
     Xn = add_process_noise(X, Q)
-    # print ("X_true+Noize", Xn)
     Zn = do_measurement(Xn, R)
-    # print ("ИЗМерения", Zn)
     X_c = estimate(Zn)
-    # print ("X_c", X_c)
     err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
 
     # print("ошибка в статистике calc_err",err[0])
@@ -235,7 +231,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 2000
+    num_iterations = 1
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
