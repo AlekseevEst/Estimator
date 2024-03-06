@@ -94,7 +94,7 @@ class Target():
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-tg1.init_state({'x':500.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0}) # к ключам добавить ax и ay будет модель CA
+tg1.init_state({'x':-500.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0}) # к ключам добавить ax и ay будет модель CA
 #tg1.init_process_noise({'ax':0.0,'ay':0.0}) # при нулях ax и ay воздействия на цель не будет. будет прямая траектория.
 
 def plot_xy(tg1, Pd = 1.0, xmk=[], ymk=[]): #при pd = 1 пропусков не будет
@@ -129,10 +129,6 @@ x,y,z, X_true_data = plot_xy(tg1,1)
 
 
 # ================= Блок 2 =================
-# r = np.sqrt(np.array(x)**2 + np.array(y)**2 + np.array(z)**2)
-# az = np.arctan2(np.array(y),np.array(x)) # Азимут
-# um = np.arctan2(np.array(z),np.sqrt(np.array(x)**2+np.array(y)**2)) # Угол места
-
 
 process_var = 0.5
 Qp = np.diag([process_var, process_var, process_var])
@@ -155,11 +151,6 @@ plt.legend()
 # print("X_true+noise", X_true_plus_noise)
 
 
-r_true_with_noise = np.sqrt(np.array(X_true_plus_noise[0])**2 + np.array(X_true_plus_noise[2])**2 + np.array(X_true_plus_noise[4])**2)
-az_true_with_noise = np.arctan2(np.array(X_true_plus_noise[2]),np.array(X_true_plus_noise[0])) # Азимут
-um_true_with_noise = np.arctan2(np.array(X_true_plus_noise[4]),np.sqrt(np.array(X_true_plus_noise[0])**2+np.array(X_true_plus_noise[2])**2)) # Угол места
-
-
 # ================= Блок 3 =====================
 
 def Zsph2cart(Z):
@@ -170,8 +161,11 @@ def Zsph2cart(Z):
     Z_cart = np.vstack((x,y,z))
     return Z_cart
 
-def do_measurement(X,R):
-    Zm = np.zeros((R.shape[0], X.shape[1]))
+def do_measurement(X_plusProcNoise,R):
+    r_true_with_noise = np.sqrt(np.array(X_plusProcNoise[0])**2 + np.array(X_plusProcNoise[2])**2 + np.array(X_plusProcNoise[4])**2)
+    az_true_with_noise = np.arctan2(np.array(X_plusProcNoise[2]),np.array(X_plusProcNoise[0])) # Азимут
+    um_true_with_noise = np.arctan2(np.array(X_plusProcNoise[4]),np.sqrt(np.array(X_plusProcNoise[0])**2+np.array(X_plusProcNoise[2])**2)) # Угол места
+    Zm = np.zeros((R.shape[0], X_plusProcNoise.shape[1]))
     for i in range(Zm.shape[1]):
         Zm[0,i] = r_true_with_noise[i]
         Zm[1,i] = az_true_with_noise[i]
@@ -191,20 +185,26 @@ plt.legend()
 k = 1.0
 def estimate (Z):
     Z_cart = Zsph2cart(Z)
-    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
-    # Z0 = np.vstack([Z[0,0], Z[1,0], Z[2,0]])
 
+    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
 
     ukf = estimator.BindUkf(X0,dt,Qp,R,k) #инициал. фильтра
-    X_c = X0    # в массив откоректированных значений записывается первая отметка.
+    X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
         _ = ukf.predictUkf(Z[:,i+1])
         X = ukf.correctUkf(Z[:,i+1])
-        X_c = np.hstack((X_c, X))
+
+        X_c = np.append(X_c,X,axis=1)
+     
     return X_c 
 
 X_c = estimate(Z)
 
+def err1(X_c,X_true_plus_noise):
+    er = X_c[:,:] - X_true_plus_noise [:,1:]
+    return er
+e = err1(X_c,X_true_plus_noise)
+# print("e =", e[0]) #Распечатка ошибок по Х одной трассы
 
 
 Z_cart = Zsph2cart(Z)
@@ -219,26 +219,31 @@ plt.legend()
 # СБОР СТАТИСТИКИ
 
 def calc_err(X):
+    # print ("X_true", X)  все штатно
     Xn = add_process_noise(X, Q)
+    # print ("X_true+Noize", Xn)
     Zn = do_measurement(Xn, R)
+    # print ("ИЗМерения", Zn)
     X_c = estimate(Zn)
-    err = X_c[:,1:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
+    # print ("X_c", X_c)
+    err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
 
-    print(err[0])
+    # print("ошибка в статистике calc_err",err[0])
 
     return err
 
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 1
-    var_err = np.zeros((X.shape[0], X.shape[1]-1)) # минус один столбец, так как ошибка вычисляется со 2-го столбца.
+    num_iterations = 2000
+    var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
         err = calc_err(X)
         var_err += err ** 2
 
     var_err /= num_iterations
+    # print("ошибка в статистике std_err",np.sqrt(var_err)[0])
     return np.sqrt(var_err)
 
 std_err = calc_std_err(X_true_data)
