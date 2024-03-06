@@ -231,7 +231,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 1
+    num_iterations = 2000
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
