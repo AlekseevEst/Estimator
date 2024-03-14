@@ -2,13 +2,26 @@
 #include "utils.h"
 #define ENUM_TO_INT(x) static_cast<int>(x)
 
-enum class SizeMat {
+enum class SizeMat
+{
     ROW1 = 1,
     ROW3 = 3,
     ROW6 = 6,
     COL1 = 1,
     COL6 = 6
 };
+enum class MeasPositionMat
+{
+    AZ = 1,
+    EL = 2
+};
+enum class CoordPositionMat
+{
+    X = 0,
+    Y = 2,
+    Z = 4
+};
+
 template <class M>
 struct FuncConstVel
 {
@@ -41,7 +54,6 @@ struct FuncConstVel
             0.0, 0.0, 0.0, 0.0, 1.0, T,
             0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
 
-        //------------ЭКСТРАПОЛЯЦИЯ СИГМА-ВЕКТОРОВ-----------------
         std::vector<M> Xue(Xu.size());
 
         for (int i = 0; i < Xu.size(); i++)
@@ -53,47 +65,48 @@ struct FuncConstVel
     }
 };
 
-
-
 template <class M>
 struct FuncMeasSph
 { 
         M operator()(const M X, M Z)
     {   
-        SizeMat rows = SizeMat::ROW3;
-        SizeMat cols = SizeMat::COL1;
+        MeasPositionMat azPos = MeasPositionMat::AZ;
 
-        double range = sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2) + pow(X(4, 0), 2));
-        double az = atan2(X(2, 0), X(0, 0));
-        double el = atan2(X(4, 0), sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2)));
+        CoordPositionMat xPos = CoordPositionMat::X;
+        CoordPositionMat yPos = CoordPositionMat::Y;
+        CoordPositionMat zPos = CoordPositionMat::Z;
+
+        double range = sqrt(pow(X(ENUM_TO_INT(xPos), 0), 2) + pow(X(ENUM_TO_INT(yPos), 0), 2) + pow(X(ENUM_TO_INT(zPos), 0), 2));
+        double az = atan2(X(ENUM_TO_INT(yPos), 0), X(ENUM_TO_INT(xPos), 0));
+        double el = atan2(X(ENUM_TO_INT(zPos), 0), sqrt(pow(X(ENUM_TO_INT(xPos), 0), 2) + pow(X(ENUM_TO_INT(yPos), 0), 2)));
         
-        az =  Z(1,0) + Utils<M>::ComputeAngleDifference(az, Z(1,0));
+        az =  Z(ENUM_TO_INT(azPos),0) + Utils<M>::ComputeAngleDifference(az, Z(ENUM_TO_INT(azPos),0));
         M z (Z.rows(), Z.cols());
         z << range,az,el;
         return z;
     }
 
-
     std::vector<M> operator()(const std::vector<M> Xue, M Z)
     {   
-        SizeMat rows = SizeMat::ROW3;
-        SizeMat cols = SizeMat::COL1;
+        MeasPositionMat azPos = MeasPositionMat::AZ;
+
+        CoordPositionMat xPos = CoordPositionMat::X;
+        CoordPositionMat yPos = CoordPositionMat::Y;
+        CoordPositionMat zPos = CoordPositionMat::Z;
+
         std::vector<M> Zue(Xue.size());
         for (int i = 0; i < Xue.size(); i++)
         {
-            double range = sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2) + pow(Xue[i](4, 0), 2));
-            double az = atan2(Xue[i](2, 0), Xue[i](0, 0));
-            double el = atan2(Xue[i](4, 0), sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2)));
+            double range = sqrt(pow(Xue[i](ENUM_TO_INT(xPos), 0), 2) + pow(Xue[i](ENUM_TO_INT(yPos), 0), 2) + pow(Xue[i](ENUM_TO_INT(zPos), 0), 2));
+            double az = atan2(Xue[i](ENUM_TO_INT(yPos), 0), Xue[i](ENUM_TO_INT(xPos), 0));
+            double el = atan2(Xue[i](ENUM_TO_INT(zPos), 0), sqrt(pow(Xue[i](ENUM_TO_INT(xPos), 0), 2) + pow(Xue[i](ENUM_TO_INT(yPos), 0), 2)));
 
-            M zTmp(ENUM_TO_INT(rows), ENUM_TO_INT(cols));
+            M zTmp(Z.rows(), Z.cols());
             zTmp << range, az, el;
             Zue[i] = zTmp;
 
-            Zue[i](1,0) =  Z(1,0) + Utils<M>::ComputeAngleDifference(Zue[i](1,0), Z(1,0));
+            Zue[i](ENUM_TO_INT(azPos),0) =  Z(ENUM_TO_INT(azPos),0) + Utils<M>::ComputeAngleDifference(Zue[i](ENUM_TO_INT(azPos),0), Z(ENUM_TO_INT(azPos),0));
         }
         return Zue;
     }
 };
-
-
-    

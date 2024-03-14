@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include <chrono>
 #include <boost/math/distributions/chi_squared.hpp>
 #include "utils.h"
 #include "models.h"
@@ -29,7 +30,7 @@ struct UnscentedKalmanfilter
     public:
 
     M predict();
-    M correct(const M& Z);
+    M correct(const M& Z = M::Zero());
 
     UnscentedKalmanfilter(const M& X, double t, const M& procNoise, const M& measNoiseMatRadian ,double koef): 
                                                                                                             T(t),UKfilterMath(X,measNoiseMatRadian, procNoise, t, koef){}
@@ -52,20 +53,7 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict()
     }
     std::vector<M> sigmaVectors = UKfilterMath.doSigmaVectors();
     weightVectors = UKfilterMath.calculationVectorWeights();
-
-    
     ExtrapolatedSigmaVectors = stateFunc(sigmaVectors, T);
-
-
-
-
-        // std::vector<M> ExtrapolatedSigmaVectors(sigmaVectors.size());
-
-        // for (int i = 0; i < sigmaVectors.size(); i++)
-        // {
-        //     Xue[i] = F * Xu[i]; 
-        // }
-
     UKfilterMath.doExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
     UKfilterMath.doCovMatExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
 
@@ -77,6 +65,14 @@ template <class M,
           template <typename> class MeasurementFunc>
 M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
 {   
+
+    if (Z.isZero())
+    {   
+        UKfilterMath.X = UKfilterMath.predictStruct.Xe;
+        UKfilterMath.P = UKfilterMath.predictStruct.Pe; // проверка на симметричность
+        return UKfilterMath.X;
+    }
+
     std::vector<M> ExtrapolatedSigmaVectorsSph = measFunc(ExtrapolatedSigmaVectors, Z);
     UKfilterMath.doExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
     UKfilterMath.doCovMatExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
@@ -85,3 +81,5 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
     M correctCov = UKfilterMath.correctCov();
     return correctState;
 }
+
+

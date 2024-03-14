@@ -50,6 +50,7 @@ UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &state, const M 
 template <class M>
 void UnscentedKalmanFilterMath<M>::make_P_cart()
 {  
+    
 
     if (P.isZero())
     {
@@ -86,6 +87,7 @@ std::vector<M> UnscentedKalmanFilterMath<M>::doSigmaVectors()
     for (int i = 0; i < n; i++)
     {  
         Xu[i + n + 1] = X - U.col(i);
+
     }
     
     return Xu;
@@ -118,7 +120,7 @@ void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(std::vector<M> &Xue
     {
         predictStruct.Xe = predictStruct.Xe + w[i] * Xue[i];
     }
-
+    
 }
 
 template <class M>
@@ -145,7 +147,7 @@ void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVectorSph(const std::vecto
 
     predictStruct.Ze = M::Zero(Zue[0].rows(),Zue[0].cols());
     for (int i = 0; i < Zue.size(); i++)
-    {   
+    {
         predictStruct.Ze = predictStruct.Ze + w[i] * Zue[i];
     }
 }
@@ -185,11 +187,8 @@ template <class M>
 M UnscentedKalmanFilterMath<M>::correctState(const M& Z)
     
 {   
-    // predictStruct.Ze(1,0) = Z(1,0) + Utils<M>::ComputeAngleDifference(predictStruct.Ze(1,0), Z(1,0));
-
     correctStruct.X = predictStruct.Xe + predictStruct.K * (Z - predictStruct.Ze);
     X = correctStruct.X; 
-    // std::cout<< "\ncorrectStruct.X ="<<correctStruct.X<<std::endl;
     return correctStruct.X;
 }
 
