@@ -159,7 +159,7 @@ bool Utils<M>::СheckingСonditionsMat(const M& P)
     if((P.transpose().isApprox(P, 1e-8)) && (P.llt().info() == Eigen::Success) && (P.determinant() !=0))
         return true;
         else{
-            return false;
+            throw std::runtime_error("СheckingСonditionsMat ERROR");
         }
 }
 template <class M>

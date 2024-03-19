@@ -51,7 +51,6 @@ template <class M>
 void UnscentedKalmanFilterMath<M>::make_P_cart()
 {  
     
-
     if (P.isZero())
     {
         M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);

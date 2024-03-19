@@ -30,7 +30,7 @@ struct UnscentedKalmanfilter
     public:
 
     M predict();
-    M correct(const M& Z = M::Zero());
+    M correct(const M& Z);
 
     UnscentedKalmanfilter(const M& X, double t, const M& procNoise, const M& measNoiseMatRadian ,double koef): 
                                                                                                             T(t),UKfilterMath(X,measNoiseMatRadian, procNoise, t, koef){}
@@ -56,7 +56,7 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict()
     ExtrapolatedSigmaVectors = stateFunc(sigmaVectors, T);
     UKfilterMath.doExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
     UKfilterMath.doCovMatExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
-
+    
     return UKfilterMath.predictStruct.Xe;
 }
 
@@ -65,14 +65,6 @@ template <class M,
           template <typename> class MeasurementFunc>
 M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
 {   
-
-    if (Z.isZero())
-    {   
-        UKfilterMath.X = UKfilterMath.predictStruct.Xe;
-        UKfilterMath.P = UKfilterMath.predictStruct.Pe; // проверка на симметричность
-        return UKfilterMath.X;
-    }
-
     std::vector<M> ExtrapolatedSigmaVectorsSph = measFunc(ExtrapolatedSigmaVectors, Z);
     UKfilterMath.doExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
     UKfilterMath.doCovMatExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
@@ -81,5 +73,3 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
     M correctCov = UKfilterMath.correctCov();
     return correctState;
 }
-
-

@@ -241,6 +241,7 @@ plt.legend()
 k = 1.0
 def estimate (Z):
 
+
     Z_cart = Zsph2cart(Z)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
 
@@ -280,7 +281,6 @@ def calc_err(X):
 
     Xn = add_process_noise(X, Q)
     X_pass, pass_id = make_pass(Xn,pd)
-    print("X_pass",X_pass)
     Zn = do_measurement(X_pass, R, pass_id)
     X_c = estimate(Zn)
 
@@ -294,7 +294,7 @@ from tqdm import tqdm
 
 def calc_std_err(X):
     print ("X", X)
-    num_iterations = 1
+    num_iterations = 2000
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
