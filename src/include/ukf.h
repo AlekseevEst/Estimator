@@ -31,9 +31,12 @@ struct UnscentedKalmanfilter
 
     M predict();
     M correct(const M& Z);
+    UnscentedKalmanFilterMath<M> getFilterMath(); 
+    void setFilterMath(UnscentedKalmanFilterMath<M> &);
 
     UnscentedKalmanfilter(const M& X, double t, const M& procNoise, const M& measNoiseMatRadian ,double koef): 
                                                                                                             T(t),UKfilterMath(X,measNoiseMatRadian, procNoise, t, koef){}
+                                                                                                           
 };
 
 template <class M,
@@ -72,4 +75,20 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
     M correctState = UKfilterMath.correctState(Z);
     M correctCov = UKfilterMath.correctCov();
     return correctState;
+}
+
+template <class M,
+          template <typename> class StateFunc,
+          template <typename> class MeasurementFunc>
+UnscentedKalmanFilterMath<M> UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::getFilterMath()
+{
+    return UKfilterMath;
+}
+
+template <class M,
+          template <typename> class StateFunc,
+          template <typename> class MeasurementFunc>
+void UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>:: setFilterMath(UnscentedKalmanFilterMath<M> &newUkfilterMath)
+{
+    UKfilterMath = newUkfilterMath;
 }

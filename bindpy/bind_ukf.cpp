@@ -7,8 +7,7 @@ class BindUkf
 private:
 
     UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel,FuncMeasSph> ukf;
-
-
+ 
 public:
     
         BindUkf(Eigen::MatrixXd state,

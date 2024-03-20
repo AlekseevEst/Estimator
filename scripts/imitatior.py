@@ -13,7 +13,6 @@ dt = 6.0
 pd = 0.9
 R = np.diag([1.0, 1e-4, 1e-4]) # в рад задается
 plt.rcParams['figure.figsize'] = [10, 6]
-fig = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 
 class Target():
@@ -117,14 +116,11 @@ def make_pass(X_true_data, pd): #при pd = 1 пропусков не буде�
         if uniform.rvs() < (1 - pd):
            xtmp [:,i] = 0
     pass_columns = np.all(xtmp == 0, axis=0)
-    # print ("xtmp",xtmp)
-    # print("X_true_data_Notpass",X_true_data)
-    # print("pass",pass_columns)
     return xtmp, pass_columns
 
 
 def make_true (tg1): 
-    n = 10 # количество измерении
+    n = 100 # количество измерении
 
     x1=[];y1=[];z1=[]; vx1=[];vy1=[];vz1=[] 
     for i in range(n):
@@ -136,16 +132,7 @@ def make_true (tg1):
         vy1.append(state1['vy'])
         vz1.append(state1['vz'])
 
-    X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1])      
- 
-    # Создаем трехмерный scatter plot для массива
-    # scatter1 = go.Scatter3d(x=X_true_data_not_pass[0], y=X_true_data_not_pass[2], z=X_true_data_not_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
-    # fig.add_trace(scatter1)
-
-    # # Обновляем параметры макета
-    # fig.update_layout(scene=dict(aspectmode="cube"))
-    # fig.show()
-    
+    X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1])        
 
     return (X_true_data_not_pass)
 
@@ -156,14 +143,12 @@ X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
 
 with_pass = remove_zero_columns(X_true_data_with_pass)
 # Создаем трехмерный scatter plot для массива
-# scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[2], z=with_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
-# fig2.add_trace(scatter2)
+scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[2], z=with_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
+fig2.add_trace(scatter2)
 
-# # Обновляем параметры макета
-# fig2.update_layout(scene=dict(aspectmode="cube"))
-# fig2.show()
-
-
+# Обновляем параметры макета
+fig2.update_layout(scene=dict(aspectmode="cube"))
+fig2.show()
 
 
 # ================= Блок 2 =================
@@ -194,7 +179,7 @@ X_true_plus_ProcNoise_not_pass = X_true_plus_ProcNoise_with_pass
 X_true_plus_ProcNoise_not_pass[:,pass_index] = 0
 X_true_plus_ProcNoise_not_pass = X_true_plus_ProcNoise_with_pass[:, ~pass_index] # вырезаю пропуски, что построить график
 # print("X_true_plus_ProcNoise_not_pass" , X_true_plus_ProcNoise_not_pass)
-plt.plot(X_true_plus_ProcNoise_not_pass[0],X_true_plus_ProcNoise_not_pass[2], label='X_true_plus_ProcNoise', linestyle='-', marker='o')
+plt.plot(X_true_plus_ProcNoise_not_pass[0],X_true_plus_ProcNoise_not_pass[2], label='X_true_plus_ProcNoise+pass', linestyle='-', marker='o')
 plt.legend()
 # print("X_true+noise", X_true_plus_ProcNoise)
 
@@ -241,17 +226,18 @@ plt.legend()
 k = 1.0
 def estimate (Z):
 
-
     Z_cart = Zsph2cart(Z)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
 
-    ukf = estimator.BindUkf(X0,dt,Qp,R,k) #инициал. фильтра
+    ukf = estimator.BindTrackUkf(X0,dt,Qp,R,k) #инициал. фильтра
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
-        _ = ukf.predictUkf()
-        X = ukf.correctUkf(Z[:,i+1])
+        if np.all(Z[:,i+1] == 0):
+            X = ukf.step(dt)
+            X_c = np.append(X_c,X,axis=1)
+            continue
+        X = ukf.step(Z[:,i+1])
         X_c = np.append(X_c,X,axis=1)
-     
     return X_c 
 
 X_c = estimate(Z)
@@ -293,7 +279,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    print ("X", X)
+    # print ("X", X)
     num_iterations = 2000
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 

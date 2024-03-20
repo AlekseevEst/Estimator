@@ -5,6 +5,9 @@
 template <class M, class TypeEstimator>
 struct Track
 {
+
+    Track(const M &X, double t, const M &procNoise, const M &measNoiseMatRadian, double koef) : estimator(X, t, procNoise, measNoiseMatRadian, koef) {}
+
     M Step(M &meas)
     {
         M xe = estimator.predict();
@@ -13,20 +16,21 @@ struct Track
     }
     M Step(double dt)
     {
-        M xe = estimator.predict();
-        estimator.UKfilterMath.X = estimator.UKfilterMath.predictStruct.Xe;
+        auto FilterMath = estimator.getFilterMath();
+        FilterMath.X = estimator.predict();
 
         try
         {
-            Utils<M>::СheckingСonditionsMat(estimator.UKfilterMath.predictStruct.Pe)
+            Utils<M>::СheckingСonditionsMat(FilterMath.predictStruct.Pe);
         }
         catch (const std::runtime_error &e)
         {
             std::cerr << e.what() << '\n';
         }
 
-        estimator.UKfilterMath.P = estimator.UKfilterMath.predictStruct.Pe;
-        return estimator.UKfilterMath.P;
+        FilterMath.P = FilterMath.predictStruct.Pe;
+        estimator.setFilterMath(FilterMath);
+        return FilterMath.X;
     }
 
 private:

@@ -1,5 +1,6 @@
 #pragma once
 #include "Eigen/Dense"
+#include <iostream>
 #include "structs.h"
 
 #define ENUM_TO_INT(x) static_cast<int>(x)
