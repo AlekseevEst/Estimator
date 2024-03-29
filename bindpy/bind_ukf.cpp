@@ -7,16 +7,15 @@ class BindUkf
 private:
 
     UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel,FuncMeasSph> ukf;
-
-
+ 
 public:
     
         BindUkf(Eigen::MatrixXd state,
-                double t,
+                double dt,
                 Eigen::MatrixXd processNoise,
                 Eigen::MatrixXd measureNoise,
                 double k):              
-                          ukf(state,t,processNoise,measureNoise,k){}
+                          ukf(state, dt,processNoise,measureNoise,k){}
                               
 
     Eigen::MatrixXd predUkf()

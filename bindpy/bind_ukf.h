@@ -5,5 +5,4 @@
 #include <pybind11/eigen.h>
 #include "ukf.h"
 
-
 void bind_ukf(pybind11::module &m);
