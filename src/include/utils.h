@@ -19,7 +19,7 @@ public:
     static M RsphRad2RsphDeg(const M &R);
     static double ComputeAngleDifference(double angle1, double angle2);
     static M CholeskyLowerTriangularTransposition(const M& P);
-    static bool СheckingСonditionsMat(const M& P);
+    static bool CheckingConditionsMat(const M& P);
 
 private:
 };
@@ -195,11 +195,11 @@ M Utils<M>::RsphRad2RsphDeg(const M &R)
 
         else
         {
-                double dispersUm_R_rad = R(ENUM_TO_INT(SphPos::POS_VR), ENUM_TO_INT(SphPos::POS_VR));
+                double dispersVr = R(ENUM_TO_INT(SphPos::POS_VR), ENUM_TO_INT(SphPos::POS_VR));
                 R_sph_deg <<    dispersRgn_R, 0.0, 0.0, 0.0,
                                 0.0, (dispersAz_R_rad * (180 / M_PI)), 0.0, 0.0,
                                 0.0, 0.0, (dispersUm_R_rad * (180 / M_PI)), 0.0,
-                                0.0, 0.0, 0.0, 10.0;
+                                0.0, 0.0, 0.0, dispersVr;
         }
 
     return R_sph_deg;
@@ -214,7 +214,7 @@ double Utils<M>::ComputeAngleDifference(double angle1, double angle2)
 }
 
 template <class M>
-bool Utils<M>::СheckingСonditionsMat(const M &P)
+bool Utils<M>::CheckingConditionsMat(const M &P)
 {
     if ((P.transpose().isApprox(P, 1e-8)) && (P.llt().info() == Eigen::Success) && (P.determinant() != 0))
         return true;

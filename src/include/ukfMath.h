@@ -73,12 +73,12 @@ M UnscentedKalmanFilterMath<M>::doSigmaVectors(const M& X, const M& U)
     Xu.col(0) = X; // в качестве первого сигма вектора берется текущий вектор состояния.
 
     // Второй компонент. В качестве n/2 берется сумма среднего и некоторого отклонения U.col(i)
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {   
         Xu.col(i + 1) = X + U.col(i);
     }
     // Третий компонент. В качестве n/2 берется разность среднего и некоторого отклонения U.col(i)
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {  
         Xu.col(i + n + 1) = X - U.col(i);
 
@@ -95,7 +95,7 @@ std::vector<double> UnscentedKalmanFilterMath<M>::calculationVectorWeights()
 
     w[0] = kappa / (n + kappa);
 
-    for (int i = 0; i < 2 * n ; i++)
+    for (size_t i = 0; i < 2 * n ; i++)
     {
         w[i + 1] = 0.5 / (n + kappa);
     }

@@ -18,6 +18,8 @@ include(CTest)
 include(3rd_party/Catch2)
 include(3rd_party/eigen)
 
+
+
 option(CLANG_TIDY_RUN "Run clang-tidy alongside project build" ON)
 find_program(CLANG_TIDY_PROGRAM clang-tidy)
 
@@ -39,3 +41,4 @@ if (pybind11_FOUND)
 else(pybind11_FOUND)
     message(STATUS "-----Pybind11 not found------")
 endif(pybind11_FOUND)
+target_compile_options(estimator PRIVATE -Wall -Wextra)

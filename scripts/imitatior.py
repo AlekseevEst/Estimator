@@ -123,7 +123,7 @@ class Target():
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-tg1.init_state({'x':500.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0}) # к ключам добавить ax и ay будет модель CA 
+tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0}) # к ключам добавить ax и ay будет модель CA 
 
 
 def remove_zero_columns(arr):
@@ -240,7 +240,6 @@ def do_measurement(X_plusProcNoise,R, pass_index):
         Zm[3,i] = vr_with_noise[i]
 
     Z_plus_noise = Zm + np.sqrt(R) @ np.random.normal(loc=0, scale=math.sqrt(1.0), size=(Zm.shape[0], Zm.shape[1]))
-
     Z_plus_noise[:, pass_index] = 0
 
     return Z_plus_noise
@@ -312,8 +311,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    # print ("X", X)
-    num_iterations = 1000
+    num_iterations = 1
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
