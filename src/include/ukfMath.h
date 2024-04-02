@@ -193,7 +193,7 @@ M UnscentedKalmanFilterMath<M>::correctCov(const M &Pe, const M &K, const M &Se)
 {
     M P = Pe - (K * Se) * K.transpose();
 
-    if (Utils<M>::СheckingСonditionsMat(P)) // проверка на симметричность, положительно определённость и не вырожденность
+    if (Utils<M>::CheckingConditionsMat(P)) // проверка на симметричность, положительно определённость и не вырожденность
         return P;
     else
         throw std::runtime_error("СheckingСonditionsMat ERROR");
