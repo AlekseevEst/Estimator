@@ -134,12 +134,9 @@ def do_measurement(X_plusProcNoise,R_with_vr, pass_index):
 
 Z, Zvr = do_measurement (X_true_plus_ProcNoise_with_pass, R_with_vr, pass_index)
 
-#==================Отрисовка==================
 
 Ztmp = remove_zero_columns(Z)
 Zc = Zsph2cart(Ztmp)
-
-
 # ================= Блок 4 ===================
 k = 1.0
 def estimate (Z):

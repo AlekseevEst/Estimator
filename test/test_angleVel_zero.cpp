@@ -7,7 +7,8 @@ TEST_CASE("W")
 
 
 
-    BENCHMARK("W"){
+    BENCHMARK("W")
+    {
 
     };
 }

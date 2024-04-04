@@ -20,7 +20,7 @@ include(3rd_party/eigen)
 
 
 
-option(CLANG_TIDY_RUN "Run clang-tidy alongside project build" ON)
+option(CLANG_TIDY_RUN "Run clang-tidy alongside project build" OFF)
 find_program(CLANG_TIDY_PROGRAM clang-tidy)
 
 if(CLANG_TIDY_PROGRAM AND CLANG_TIDY_RUN)
@@ -28,7 +28,7 @@ if(CLANG_TIDY_PROGRAM AND CLANG_TIDY_RUN)
     set(CLANG_TIDY_CHECKS "cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers,clang-analyzer-*,bugprone-*")
     set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_PROGRAM};-checks=${CLANG_TIDY_CHECKS}")
 else()
-    message(not found)
+    message(CLANG not found)
 endif()
 set(ARCH "native" CACHE STRING "Architecture to optimize for (-march)")
 add_subdirectory(src)
