@@ -1,7 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
 #include "ukf.h"
-#include "ekf.h"
 using namespace Catch::Benchmark;
 
 TEST_CASE("filtering_ukf")
@@ -35,7 +34,7 @@ TEST_CASE("filtering_ukf")
     CHECK(ukf.predict().isApprox(expectedPredState,0.0001));
     CHECK(ukf.correct(Z).isApprox(expectedCorrectState,0.0001));
 
-    BENCHMARK("ESTIMATOR"){
+    BENCHMARK("STEP"){
         ukf.predict();
         ukf.correct(Z);
     };
