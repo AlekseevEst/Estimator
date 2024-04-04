@@ -36,9 +36,10 @@ struct FuncConstTurn
         M F(ENUM_TO_INT(SizeMat::ROW7),ENUM_TO_INT(SizeMat::COL7));
 
         M Xue(Xu.rows(),Xu.cols());
+        double w = Xu.col(ENUM_TO_INT(SizeMat::COL0))(ENUM_TO_INT(CoordPositionMat::W));
+
         for (int i = 0; i < Xu.cols(); i++)
         {
-            double w = Xu.col(i)(ENUM_TO_INT(CoordPositionMat::W));
 
             F << 1.0,  sin(w*T)/w,      0.0,   -(1-cos(w*T))/w,    0.0,    0.0,   0.0,
                 0.0,  cos(w*T),         0.0,    -sin(w*T),          0.0,    0.0,   0.0,
@@ -86,10 +87,9 @@ struct FuncMeasSph
             }    
             else
             {        
-                double r = sqrt(pow(Xue.col(i)(ENUM_TO_INT(xPos)),2)+ pow(Xue.col(i)(ENUM_TO_INT(yPos)),2) + pow(Xue.col(i)(ENUM_TO_INT(zPos)),2));
                 double vr = (Xue.col(i)(ENUM_TO_INT(vxPos)) * Xue.col(i)(ENUM_TO_INT(xPos)) + \
                             Xue.col(i)(ENUM_TO_INT(vyPos)) * Xue.col(i)(ENUM_TO_INT(yPos)) + \
-                            Xue.col(i)(ENUM_TO_INT(vzPos)) * Xue.col(i)(ENUM_TO_INT(zPos)))/r;
+                            Xue.col(i)(ENUM_TO_INT(vzPos)) * Xue.col(i)(ENUM_TO_INT(zPos)))/range;
 
             
                 zTmp << range, az, el, vr;
@@ -101,6 +101,5 @@ struct FuncMeasSph
         return Zue;
     }
 };
-
 
 

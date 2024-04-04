@@ -25,12 +25,14 @@ private:
 };
 
 enum class SizeMat
-{
+{   
+    ROW0 = 0,
     ROW1 = 1,
     ROW3 = 3,
     ROW4 = 4,
     ROW6 = 6,
     ROW7 = 7,
+    COL0 = 0,
     COL1 = 1,
     COL3 = 3,
     COL4 = 4,

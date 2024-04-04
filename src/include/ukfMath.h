@@ -21,6 +21,7 @@ struct UnscentedKalmanFilterMath
     M calcGainFilter(const M &Xue, const M &Xe, const M &Zue, const M &Ze, const M &Se, std::vector<double> w);
     M correctState(const M& Xe,const M& Z, const M& Ze, const M& K);
     M correctCov(const M& Pe, const M& K, const M& Se);
+    M сры(M в);
 
     private:
 
@@ -197,4 +198,9 @@ M UnscentedKalmanFilterMath<M>::correctCov(const M &Pe, const M &K, const M &Se)
         return P;
     else
         throw std::runtime_error("СheckingСonditionsMat ERROR");
+}
+template <class M>
+M UnscentedKalmanFilterMath<M>::сры(M в)
+{
+  double упс = 20.0;
 }

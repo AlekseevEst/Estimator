@@ -18,9 +18,9 @@ public:
         return track.Step(meas);
     }
 
-    Eigen::MatrixXd step(double dt)
+    Eigen::MatrixXd step()
     {
-        return track.Step(dt);
+        return track.Step();
     }
 };
 
@@ -29,5 +29,5 @@ void bind_track(pybind11::module &m)
     py::class_<BindTrackUkf>(m, "BindTrackUkf")
         .def(py::init<const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, double>())
         .def("step", (Eigen::MatrixXd(BindTrackUkf::*)(const Eigen::MatrixXd &)) & BindTrackUkf::step)
-        .def("step", (Eigen::MatrixXd(BindTrackUkf::*)(double)) & BindTrackUkf::step);
+        .def("step", (Eigen::MatrixXd(BindTrackUkf::*)()) & BindTrackUkf::step);
 }

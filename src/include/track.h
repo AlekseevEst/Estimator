@@ -13,6 +13,7 @@ struct Track
         {
             M xe = estimator.predict();
             M x = estimator.correct(meas);
+
             return x;
         }
         catch (const std::runtime_error &e)
@@ -22,7 +23,7 @@ struct Track
         }
     }
 
-    M Step(double dt)
+    M Step()
     {
 
         try
