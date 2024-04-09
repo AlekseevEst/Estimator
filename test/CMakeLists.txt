@@ -3,7 +3,7 @@
 option(ESTIMATOR_ADD_TESTS "Add estimator tests to CTest" ON)
 
 #### Добавление исполняемого файла ...#####################################
-set(sources_list_test test_estimators.cpp)
+set(sources_list_test test_estimators.cpp test_angleVel_zero.cpp)
 add_executable(estimator_unit_tests ${sources_list_test})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)

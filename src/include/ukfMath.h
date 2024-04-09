@@ -7,85 +7,81 @@
 template <class M>
 struct UnscentedKalmanFilterMath
 {
-    M X;
-    M P;
+
+    UnscentedKalmanFilterMath(const M &measNoiseMatRadian, const M &procNoise, double &k);
+    M make_P_cart(const M& P, const M& X);
+    M sqrt_matrix_p(const M& P);
+    M doSigmaVectors(const M& X, const M& U);
+    std::vector<double> calculationVectorWeights();
+    M doExtrapolatedStateVector(const M &Xue, std::vector<double> w);
+    M doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, std::vector<double> w, double t);
+    
+    M doExtrapolatedMeasVector(const M &Zue, std::vector<double> w);
+    M doCovMatExtrapolatedMeasVector(const M &Zue,const M& Ze, std::vector<double> w);
+    M calcGainFilter(const M &Xue, const M &Xe, const M &Zue, const M &Ze, const M &Se, std::vector<double> w);
+    M correctState(const M& Xe,const M& Z, const M& Ze, const M& K);
+    M correctCov(const M& Pe, const M& K, const M& Se);
+
+    private:
+
     M R_sph_rad;
     M Q;
-    M U;
     size_t n;
     double kappa;
-    double t;
-    Predict<M> predictStruct;
-    Correct<M> correctStruct;
-
-    UnscentedKalmanFilterMath(const M &state, const M &measNoiseMatRadian, const M &procNoise, double T, double &k);
-    void make_P_cart();
-    void sqrt_matrix_p();
-    std::vector<M> doSigmaVectors();
-    std::vector<double> calculationVectorWeights();
-    void doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<double> w);
-    void doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<double> w);
-    
-    void doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
-    void doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w);
-    void calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<double> w);
-    M correctState(const M& Z);
-    M correctCov();
-
 };
 
 template <class M>
-UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &state, const M &measNoiseMatRadian, const M &procNoise, double T, double &k)
+UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &measNoiseMatRadian, const M &procNoise, double &k)
 {   
-    X = state;
-    P.resize(X.rows(),X.rows());
-    P.setZero();
     R_sph_rad = measNoiseMatRadian;
     Q = procNoise;
-    n = P.cols();
     kappa = k;
-    t = T;
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::make_P_cart()
-{  
-
+M UnscentedKalmanFilterMath<M>::make_P_cart(const M& P, const M& X)
+{   
     if (P.isZero())
     {
         M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
         Measurement measZ0 = Utils<M>::make_Z0(X);
-        P = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas));
-    }
 
+        M P0 = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas));
+        n = P0.cols();
+        return P0;
+    }
+    return P;
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::sqrt_matrix_p()
+M UnscentedKalmanFilterMath<M>::sqrt_matrix_p(const M& P)
 {
 // -----------ВЗЯТИЕ МАТРИЧНОГО КОРНЯ----------------
 
     M L = Utils<M>::CholeskyLowerTriangularTransposition(P);
-    U = sqrt(n + kappa) * L; // Масшатбирующий коэффициент умноженный на Матричный корень
+    M U = sqrt(n + kappa) * L; // Масшатбирующий коэффициент умноженный на Матричный корень
+    return U;
 }
 
 template <class M>
-std::vector<M> UnscentedKalmanFilterMath<M>::doSigmaVectors()
+M UnscentedKalmanFilterMath<M>::doSigmaVectors(const M& X, const M& U)
 {
     //----------СОЗДАЕМ Xu СИГМА-ВЕКТОРОВ------------------
-    std::vector<M> Xu(2*n+1);
+
+    M Xu(X.rows(),2*n+1);
     // Первый компонент
-    Xu[0] = X; // в качестве первого сигма вектора берется текущий вектор состояния.
+    Xu.col(0) = X; // в качестве первого сигма вектора берется текущий вектор состояния.
 
     // Второй компонент. В качестве n/2 берется сумма среднего и некоторого отклонения U.col(i)
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {   
-        Xu[i + 1] = X + U.col(i);
+        Xu.col(i + 1) = X + U.col(i);
     }
     // Третий компонент. В качестве n/2 берется разность среднего и некоторого отклонения U.col(i)
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {  
-        Xu[i + n + 1] = X - U.col(i);
+        Xu.col(i + n + 1) = X - U.col(i);
+
     }
     
     return Xu;
@@ -99,7 +95,7 @@ std::vector<double> UnscentedKalmanFilterMath<M>::calculationVectorWeights()
 
     w[0] = kappa / (n + kappa);
 
-    for (int i = 0; i < 2 * n ; i++)
+    for (size_t i = 0; i < 2 * n ; i++)
     {
         w[i + 1] = 0.5 / (n + kappa);
     }
@@ -108,104 +104,97 @@ std::vector<double> UnscentedKalmanFilterMath<M>::calculationVectorWeights()
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(std::vector<M> &Xue, std::vector<double> w)
+M UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(const M &Xue, std::vector<double> w)
 {
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ----------
 
-    predictStruct.Xe = M::Zero(Xue[0].rows(), Xue[0].cols());
+    M Xe = M::Zero(Xue.rows(), 1);
 
-    for (int i = 0; i < Xue.size(); i++)
+    for (int i = 0; i < Xue.cols(); i++)
     {
-        predictStruct.Xe = predictStruct.Xe + w[i] * Xue[i];
+        Xe = Xe + w[i] * Xue.col(i);
     }
-
+    return Xe;
+    
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const std::vector<M> &Xue, std::vector<double> w)
+M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, std::vector<double> w, double t)
 {
 
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ
-    predictStruct.Pe = M::Zero(P.rows(), P.cols());
+    M Pe = M::Zero(Xue.rows(), Xue.rows());
     
-    for (int i = 0; i < Xue.size(); i++)
+    for (int i = 0; i < Xue.cols(); i++)
     {
-        M dX = Xue[i] - predictStruct.Xe;
-        predictStruct.Pe = predictStruct.Pe + w[i] * (dX * dX.transpose());
+        M dX = Xue.col(i) - Xe;
+        Pe = Pe + w[i] * (dX * dX.transpose());
     }
 
-    predictStruct.Pe = predictStruct.Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
-
+    Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
+    return Pe;
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w)
+M UnscentedKalmanFilterMath<M>::doExtrapolatedMeasVector(const M &Zue, std::vector<double> w)
 {
     //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СФЕР.  ------------------
-
-    predictStruct.Ze = M::Zero(Zue[0].rows(),Zue[0].cols());
-    for (int i = 0; i < Zue.size(); i++)
-    {   
-        predictStruct.Ze = predictStruct.Ze + w[i] * Zue[i];
+    M Ze = M::Zero(Zue.rows(),1);
+    for (int i = 0; i < Zue.cols(); i++)
+    {
+        Ze = Ze + w[i] * Zue.col(i);
     }
+    return Ze;
 }
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVectorSph(const std::vector<M> &Zue, std::vector<double> w)
+M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedMeasVector(const M &Zue, const M &Ze, std::vector<double> w)
 {
-    //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СФЕР.
-    M Pzz = M::Zero(Zue[0].rows(), Zue[0].rows());
-    for (int i = 0; i < Zue.size(); i++)
+    //----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА ИЗМЕРЕНИИ СФЕР.
+    M Pzz = M::Zero(Zue.rows(), Zue.rows());
+    for (int i = 0; i < Zue.cols(); i++)
     {
         M v;
-        v = Zue[i] - predictStruct.Ze;
+        v = Zue.col(i) - Ze;
         Pzz = Pzz + w[i] * (v * v.transpose());
     }
-    predictStruct.Se = Pzz + R_sph_rad;
+    M Se = Pzz + R_sph_rad;
+    return Se;
 }
 
 //----------------------------------------------------------------------
 
 template <class M>
-void UnscentedKalmanFilterMath<M>::calcGainFilter(const std::vector<M> &Xue, const std::vector<M> &Zue, std::vector<double> w)
+M UnscentedKalmanFilterMath<M>::calcGainFilter(const M &Xue, const M &Xe, const M &Zue, const M &Ze, const M &Se, std::vector<double> w)
 {
-    M Pxz = M::Zero(Xue[0].rows(), Zue[0].rows());
+    M Pxz = M::Zero(Xue.rows(), Zue.rows());
 
-    for (int i = 0; i < Zue.size(); i++)
+    for (int i = 0; i < Zue.cols(); i++)
     {
-        M dX = Xue[i] - predictStruct.Xe;
-        M v = Zue[i] - predictStruct.Ze;
+        M dX = Xue.col(i) - Xe;
+        M v = Zue.col(i) - Ze;
         Pxz = Pxz + w[i] * dX * v.transpose();
     }
 
-    predictStruct.K = Pxz * predictStruct.Se.inverse();
+    M gainKalman = Pxz * Se.inverse();
+    return gainKalman;
 }
 
 template <class M>
-M UnscentedKalmanFilterMath<M>::correctState(const M& Z)
-    
-{   
-    // predictStruct.Ze(1,0) = Z(1,0) + Utils<M>::ComputeAngleDifference(predictStruct.Ze(1,0), Z(1,0));
+M UnscentedKalmanFilterMath<M>::correctState(const M &Xe, const M &Z, const M &Ze, const M &K)
 
-    correctStruct.X = predictStruct.Xe + predictStruct.K * (Z - predictStruct.Ze);
-    X = correctStruct.X; 
-    // std::cout<< "\ncorrectStruct.X ="<<correctStruct.X<<std::endl;
-    return correctStruct.X;
+{
+    M X = Xe + K * (Z - Ze);
+    return X;
 }
 
 template <class M>
-M UnscentedKalmanFilterMath<M>::correctCov()
-{   
-    correctStruct.P = predictStruct.Pe - (predictStruct.K * predictStruct.Se) * predictStruct.K.transpose();
+M UnscentedKalmanFilterMath<M>::correctCov(const M &Pe, const M &K, const M &Se)
+{
+    M P = Pe - (K * Se) * K.transpose();
 
-    if(Utils<M>::СheckingСonditionsMat(correctStruct.P)) // проверка на симметричность, положительно определённость и не вырожденность
-    {
-        P = correctStruct.P;
-    }
-        else {
-        std::cout<< "\n ERROR: the matrix does not meet the requirements."<<correctStruct.P<<std::endl;
-    }
-     
-    return correctStruct.P;
-    
+    if (Utils<M>::CheckingConditionsMat(P)) // проверка на симметричность, положительно определённость и не вырожденность
+        return P;
+    else
+        throw std::runtime_error("СheckingСonditionsMat ERROR");
 }

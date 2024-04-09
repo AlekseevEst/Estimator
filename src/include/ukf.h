@@ -1,38 +1,42 @@
 #pragma once
 
 #include <array>
-#include <map>
 #include <cmath>
 #include <vector>
 #include <iostream>
-#include <boost/math/distributions/chi_squared.hpp>
 #include "utils.h"
 #include "models.h"
 #include "ukfMath.h"
 
 template <class M,
-                template <typename> class StateFunc,
-                template <typename> class MeasurementFunc>
+          template <typename> class StateFunc,
+          template <typename> class MeasurementFunc>
 
 struct UnscentedKalmanfilter
 {
-    private:
-
+private:
+    UnscentedKalmanFilterMath<M> UKfilterMath;
     double T;
-
-    UnscentedKalmanFilterMath<M>  UKfilterMath;
     std::vector<double> weightVectors;
-    std::vector<M> ExtrapolatedSigmaVectors;
+    M extrapolatedStateSigmaVectors;
     StateFunc<M> stateFunc;
     MeasurementFunc<M> measFunc;
-    
-    public:
+
+public:
+    Predict<M> predictStruct;
+    Correct<M> correctStruct;
 
     M predict();
-    M correct(const M& Z);
+    M correct(const M &Z);
 
     UnscentedKalmanfilter(const M& X, double t, const M& procNoise, const M& measNoiseMatRadian ,double koef): 
-                                                                                                            T(t),UKfilterMath(X,measNoiseMatRadian, procNoise, t, koef){}
+                                                                                                            UKfilterMath(measNoiseMatRadian, procNoise, koef)    
+                                                                                                            {   
+                                                                                                                T = t;
+                                                                                                                correctStruct.X = X;
+                                                                                                                correctStruct.P.resize(X.rows(),X.rows());
+                                                                                                                correctStruct.P.setZero();
+                                                                                                            }
 };
 
 template <class M,
@@ -41,35 +45,15 @@ template <class M,
 
 M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict()
 {
-    UKfilterMath.make_P_cart();
-    try
-    {
-        UKfilterMath.sqrt_matrix_p();
-    }
-    catch (const std::runtime_error& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    std::vector<M> sigmaVectors = UKfilterMath.doSigmaVectors();
+    correctStruct.P = UKfilterMath.make_P_cart(correctStruct.P, correctStruct.X);
+    M sqrtOfP = UKfilterMath.sqrt_matrix_p(correctStruct.P);
+    M sigmaVectors = UKfilterMath.doSigmaVectors(correctStruct.X,sqrtOfP);
     weightVectors = UKfilterMath.calculationVectorWeights();
+    extrapolatedStateSigmaVectors = stateFunc(sigmaVectors, T);
+    predictStruct.Xe = UKfilterMath.doExtrapolatedStateVector(extrapolatedStateSigmaVectors, weightVectors);
+    predictStruct.Pe = UKfilterMath.doCovMatExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictStruct.Xe, weightVectors, T);
 
-    
-    ExtrapolatedSigmaVectors = stateFunc(sigmaVectors, T);
-
-
-
-
-        // std::vector<M> ExtrapolatedSigmaVectors(sigmaVectors.size());
-
-        // for (int i = 0; i < sigmaVectors.size(); i++)
-        // {
-        //     Xue[i] = F * Xu[i]; 
-        // }
-
-    UKfilterMath.doExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
-    UKfilterMath.doCovMatExtrapolatedStateVector(ExtrapolatedSigmaVectors, weightVectors);
-
-    return UKfilterMath.predictStruct.Xe;
+    return predictStruct.Xe;
 }
 
 template <class M,
@@ -77,11 +61,12 @@ template <class M,
           template <typename> class MeasurementFunc>
 M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::correct(const M& Z)
 {   
-    std::vector<M> ExtrapolatedSigmaVectorsSph = measFunc(ExtrapolatedSigmaVectors, Z);
-    UKfilterMath.doExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
-    UKfilterMath.doCovMatExtrapolatedStateVectorSph(ExtrapolatedSigmaVectorsSph, weightVectors);
-    UKfilterMath.calcGainFilter(ExtrapolatedSigmaVectors, ExtrapolatedSigmaVectorsSph, weightVectors);
-    M correctState = UKfilterMath.correctState(Z);
-    M correctCov = UKfilterMath.correctCov();
-    return correctState;
+    M extrapolatedMeasSigmaVectors = measFunc(extrapolatedStateSigmaVectors, Z);
+    predictStruct.Ze = UKfilterMath.doExtrapolatedMeasVector(extrapolatedMeasSigmaVectors, weightVectors);
+    predictStruct.Se = UKfilterMath.doCovMatExtrapolatedMeasVector(extrapolatedMeasSigmaVectors, predictStruct.Ze, weightVectors);
+    predictStruct.K = UKfilterMath.calcGainFilter(extrapolatedStateSigmaVectors, predictStruct.Xe, extrapolatedMeasSigmaVectors,predictStruct.Ze, predictStruct.Se, weightVectors);
+    correctStruct.X = UKfilterMath.correctState(predictStruct.Xe,Z, predictStruct.Ze, predictStruct.K);
+    correctStruct.P = UKfilterMath.correctCov(predictStruct.Pe, predictStruct.K, predictStruct.Se);
+
+    return correctStruct.X;
 }

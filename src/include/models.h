@@ -1,38 +1,13 @@
 #pragma once
 #include "utils.h"
-#define ENUM_TO_INT(x) static_cast<int>(x)
 
-enum class SizeMat {
-    ROW1 = 1,
-    ROW3 = 3,
-    ROW6 = 6,
-    COL1 = 1,
-    COL6 = 6
-};
 template <class M>
 struct FuncConstVel
 {
-        M operator()(M X, double T)
+    M operator()(const M &Xu, double T)
     {
-        SizeMat rows = SizeMat::ROW6;
-        SizeMat cols = SizeMat::COL6;
-        M F(ENUM_TO_INT(rows),ENUM_TO_INT(cols));
 
-        F << 1.0, T, 0.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, T, 0.0, 0.0,
-            0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 1.0, T,
-            0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
-        
-        return F*X;
-    }
-
-    std::vector<M> operator()(std::vector<M> Xu, double T)
-    {
-        SizeMat rows = SizeMat::ROW6;
-        SizeMat cols = SizeMat::COL6;
-        M F(ENUM_TO_INT(rows),ENUM_TO_INT(cols));
+        M F(ENUM_TO_INT(SizeMat::ROW6),ENUM_TO_INT(SizeMat::COL6));
 
         F << 1.0, T, 0.0, 0.0, 0.0, 0.0,
             0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
@@ -41,59 +16,91 @@ struct FuncConstVel
             0.0, 0.0, 0.0, 0.0, 1.0, T,
             0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
 
-        //------------ЭКСТРАПОЛЯЦИЯ СИГМА-ВЕКТОРОВ-----------------
-        std::vector<M> Xue(Xu.size());
+        M Xue(Xu.rows(),Xu.cols());
 
-        for (int i = 0; i < Xu.size(); i++)
+        for (int i = 0; i < Xu.cols(); i++)
         {
-            Xue[i] = F * Xu[i]; 
+            Xue.col(i) = F * Xu.col(i); 
         }
         
         return Xue;
     }
 };
 
+template <class M>
+struct FuncConstTurn
+{
 
+    M operator()(const M &Xu, double T)
+    {
+        M F(ENUM_TO_INT(SizeMat::ROW7),ENUM_TO_INT(SizeMat::COL7));
+
+        M Xue(Xu.rows(),Xu.cols());
+        double w = Xu.col(ENUM_TO_INT(SizeMat::COL0))(ENUM_TO_INT(CoordPositionMat::W));
+        if (w == 0)
+            w = 1e-9;
+        for (int i = 0; i < Xu.cols(); i++)
+        {
+
+            F <<1.0,  sin(w*T)/w,       0.0,   -(1-cos(w*T))/w,    0.0,    0.0,   0.0,
+                0.0,  cos(w*T),         0.0,    -sin(w*T),         0.0,    0.0,   0.0,
+                0.0,  (1-cos(w*T))/w,   1.0,    sin(w*T)/w,        0.0,    0.0,   0.0,
+                0.0,  sin(w*T),         0.0,    cos(w*T),          0.0,    0.0,   0.0,
+                0.0,  0.0,              0.0,    0.0,               1.0,      T,   0.0,
+                0.0,  0.0,              0.0,    0.0,               0.0,    1.0,   0.0,
+                0.0,  0.0,              0.0,    0.0,               0.0,    0.0,   1.0;
+
+            
+            Xue.col(i) = F * Xu.col(i); 
+        }
+        
+        return Xue;
+    }
+
+};
 
 template <class M>
 struct FuncMeasSph
 { 
-        M operator()(const M X, M Z)
+
+    M operator()(const M &Xue, const M &Z)
     {   
-        SizeMat rows = SizeMat::ROW3;
-        SizeMat cols = SizeMat::COL1;
+        MeasPositionMat azPos = MeasPositionMat::AZ;
+        CoordPositionMat xPos = CoordPositionMat::X;
+        CoordPositionMat yPos = CoordPositionMat::Y;
+        CoordPositionMat zPos = CoordPositionMat::Z;
+        CoordPositionMat vxPos = CoordPositionMat::VX;
+        CoordPositionMat vyPos = CoordPositionMat::VY;
+        CoordPositionMat vzPos = CoordPositionMat::VZ;
 
-        double range = sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2) + pow(X(4, 0), 2));
-        double az = atan2(X(2, 0), X(0, 0));
-        double el = atan2(X(4, 0), sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2)));
-        
-        az =  Z(1,0) + Utils<M>::ComputeAngleDifference(az, Z(1,0));
-        M z (Z.rows(), Z.cols());
-        z << range,az,el;
-        return z;
-    }
-
-
-    std::vector<M> operator()(const std::vector<M> Xue, M Z)
-    {   
-        SizeMat rows = SizeMat::ROW3;
-        SizeMat cols = SizeMat::COL1;
-        std::vector<M> Zue(Xue.size());
-        for (int i = 0; i < Xue.size(); i++)
+        M Zue(Z.rows(),Xue.cols());
+        for (int i = 0; i < Xue.cols(); i++)
         {
-            double range = sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2) + pow(Xue[i](4, 0), 2));
-            double az = atan2(Xue[i](2, 0), Xue[i](0, 0));
-            double el = atan2(Xue[i](4, 0), sqrt(pow(Xue[i](0, 0), 2) + pow(Xue[i](2, 0), 2)));
+            M zTmp(Z.rows(), 1);
 
-            M zTmp(ENUM_TO_INT(rows), ENUM_TO_INT(cols));
-            zTmp << range, az, el;
-            Zue[i] = zTmp;
+                double range = sqrt(pow(Xue.col(i)(ENUM_TO_INT(xPos)), 2) + pow(Xue.col(i)(ENUM_TO_INT(yPos)), 2) + pow(Xue.col(i)(ENUM_TO_INT(zPos)), 2));
+                double az = atan2(Xue.col(i)(ENUM_TO_INT(yPos)), Xue.col(i)(ENUM_TO_INT(xPos)));
+                double el = atan2(Xue.col(i)(ENUM_TO_INT(zPos)), sqrt(pow(Xue.col(i)(ENUM_TO_INT(xPos)), 2) + pow(Xue.col(i)(ENUM_TO_INT(yPos)), 2)));
 
-            Zue[i](1,0) =  Z(1,0) + Utils<M>::ComputeAngleDifference(Zue[i](1,0), Z(1,0));
+            if (Z.rows() == ENUM_TO_INT(SizeMat::ROW3))
+            {
+                zTmp << range, az, el;
+            }    
+            else
+            {        
+                double vr = (Xue.col(i)(ENUM_TO_INT(vxPos)) * Xue.col(i)(ENUM_TO_INT(xPos)) + \
+                            Xue.col(i)(ENUM_TO_INT(vyPos)) * Xue.col(i)(ENUM_TO_INT(yPos)) + \
+                            Xue.col(i)(ENUM_TO_INT(vzPos)) * Xue.col(i)(ENUM_TO_INT(zPos)))/range;
+
+            
+                zTmp << range, az, el, vr;
+            }
+            Zue.col(i) = zTmp; 
+
+            Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)), Z(ENUM_TO_INT(azPos)));
         }
         return Zue;
     }
 };
 
 
-    
