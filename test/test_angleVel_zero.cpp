@@ -5,8 +5,6 @@ using namespace Catch::Benchmark;
 TEST_CASE("W")
 {
 
-
-
     BENCHMARK("W")
     {
 

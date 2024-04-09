@@ -13,8 +13,8 @@ from models import Target
 dt = 6.0
 pd = 0.9
 
-R_with_vr = np.diag([1.0, 1e-4, 1e-4, 10.0])
-R_without_vr = np.diag([1.0, 1e-4, 1e-4])
+R_with_vr = np.diag([10000.0, 0.01, 0.01, 25.0])
+R_without_vr = np.diag([10000.0, 0.01, 0.01])
 
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])

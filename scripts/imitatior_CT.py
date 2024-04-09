@@ -8,6 +8,7 @@ from scipy.stats import chi2, poisson, uniform, norm
 from IPython.display import clear_output
 import random
 import estimator
+from models import Target
 
 dt = 6.0
 pd = 1.0
@@ -16,114 +17,11 @@ R = np.diag([1.0, 1e-4, 1e-4, 10.0])
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 
-class Target():
-    """
-    target model description
-    """
-    def __init__(self):
-        self.targetState = {                                   # state vector
-            'x':0.0,'vx':0.0,'ax':0.0, # x states
-            'y':0.0,'vy':0.0,'ay':0.0, # y states
-            'z':0.0,'vz':0.0,'az':0.0, # z states
-            'w':0.0} # angle velocity
-
-        self.rand_gen = np.random.default_rng()           # set seed for random numbers
-        
-    def init_state(self,state):
-        initKeys = state.keys()                               # init targetState components
-        for k in initKeys:
-            self.targetState[k] = state[k]                    # set values with same keys
-    
-    
-    def CV(self):
-        # move target with CV model due dt
-        keys = ['x','vx','y','vy','z','vz']
-        X = [self.targetState[i] for i in keys]
-        F = [[1.0,  dt,     0.0,    0.0,   0.0,  0.0],
-             [0.0,  1.0,    0.0,    0.0,   0.0,  0.0],
-             [0.0,  0.0,    1.0,    dt,    0.0,  0.0],
-             [0.0,  0.0,    0.0,    1.0,   0.0,  0.0],
-             [0.0,  0.0,    0.0,    0.0,   1.0,   dt],
-             [0.0,  0.0,    0.0,    0.0,   0.0,  1.0]]
-        G = [[dt**2/2,  0.0,         0.0],
-             [dt,       0.0,         0.0],
-             [0.0,      dt**2/2,     0.0],
-             [0.0,      dt,          0.0],
-             [0.0,      0.0,     dt**2/2],
-             [0.0,      0.0,     dt     ]]
-        
-    
-        Xe = np.matmul(F,X)
-
-        for (i,k) in enumerate(keys):
-            self.targetState[k] = Xe[i]
-        return {k:self.targetState[k] for k in self.targetState.keys()} # return new dictionary
-
-    def CA(self):
-        # move target with CA model due dt
-        keys = ['x','vx','ax','y','vy','ay','z','vz','az']
-        X = [self.targetState[i] for i in keys]
-        F = [[1.0,  dt,     dt**2/2,  0.0,    0.0,    0.0,     0.0,    0.0,       0.0],
-             [0.0,  1.0,    dt,       0.0,    0.0,    0.0,     0.0,    0.0,       0.0],
-             [0.0,  0.0,    1.0,      0.0,    0.0,    0.0,     0.0,    0.0,       0.0],
-             [0.0,  0.0,    0.0,      1.0,    dt,     dt**2/2, 0.0,    0.0,       0.0],
-             [0.0,  0.0,    0.0,      0.0,    1.0,    dt,      0.0,    0.0,       0.0],
-             [0.0,  0.0,    0.0,      0.0,    0.0,    1.0,     0.0,    0.0,       0.0],
-             [0.0,  0.0,    0.0,      0.0,    0.0,    0.0,     1.0,    dt,    dt**2/2],
-             [0.0,  0.0,    0.0,      0.0,    0.0,    0.0,     0.0,    1.0,        dt],
-             [0.0,  0.0,    0.0,      0.0,    0.0,    0.0,     0.0,    0.0,       1.0]]
-        
-        G = [[dt**2/2,  0.0,         0.0],
-             [dt,       0.0,         0.0],
-             [1.0,      0.0,         0.0],
-             [0.0,      dt**2/2,     0.0],
-             [0.0,      dt,          0.0],
-             [0.0,      1.0,         0.0],
-             [0.0,      0.0,     dt**2/2],
-             [0.0,      0.0,          dt],
-             [0.0,      0.0,         1.0]]
-        
-        Xe = np.matmul(F,X)
-
-        for (i,k) in enumerate(keys):
-            self.targetState[k] = Xe[i]
-        # return new dictionary
-        return {k:self.targetState[k] for k in self.targetState.keys()}
-    
-    def CT(self):
-        # move target with CT model due dt
-        keys = ['x','vx','y','vy','z','vz','w']
-        X = [self.targetState[i] for i in keys]
-        w = self.targetState['w'] # save w value
-        F = [[1.0,  1/w*np.sin(w*dt),     0.0,      -1/w*(1-np.cos(w*dt)),  0.0,    0.0,     0.0],
-             [0.0,  np.cos(w*dt),         0.0,      -np.sin(w*dt),          0.0,    0.0,     0.0],
-             [0.0,  1/w*(1-np.cos(w*dt)), 1.0,      1/w*np.sin(w*dt),       0.0,    0.0,     0.0],
-             [0.0,  np.sin(w*dt),         0.0,       np.cos(w*dt),          0.0,    0.0,     0.0],
-             [0.0,  0.0,                  0.0,      0.0,                    1.0,     dt,     0.0],
-             [0.0,  0.0,                  0.0,      0.0,                    0.0,    1.0,     0.0],
-             [0.0,  0.0,                  0.0,      0.0,                    0.0,    0.0,     1.0]]
-        
-        G = [[dt**2/2,  0.0,         0.0],
-             [dt,       0.0,         0.0],
-             [0.0,      dt**2/2,     0.0],
-             [0.0,      dt,          0.0],
-             [0.0,      0.0,     dt**2/2],
-             [0.0,      0.0,          dt],
-             [0.0,      0.0,         0.0]]
-        
-        Xe = np.matmul(F,X)
-
-        for (i,k) in enumerate(keys):
-            self.targetState[k] = Xe[i]
-        # return new dictionary
-        return {k:self.targetState[k] for k in self.targetState.keys()}
-    
-
 # =============== Блок 1 ===================
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':200.0,'w':0.00515}) # к ключам добавить ax и ay будет модель CA 
+tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.0}) 
 
 
 def remove_zero_columns(arr):
@@ -150,7 +48,7 @@ def make_true (tg1):
 
     x1=[];y1=[];z1=[]; vx1=[];vy1=[];vz1=[]; w=[]  
     for i in range(n):
-        state1 = tg1.CT()
+        state1 = tg1.CT(dt)
         x1.append(state1['x'])
         y1.append(state1['y'])
         z1.append(state1['z'])

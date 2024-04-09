@@ -64,6 +64,8 @@ class Target():
         keys = ['x','vx','y','vy','z','vz','w']
         X = [self.targetState[i] for i in keys]
         w = self.targetState['w'] # save w value
+        if w == 0:
+            w = 1e-9    
         F = [[1.0,  1/w*np.sin(w*dt),     0.0,      -1/w*(1-np.cos(w*dt)),  0.0,    0.0,     0.0],
              [0.0,  np.cos(w*dt),         0.0,      -np.sin(w*dt),          0.0,    0.0,     0.0],
              [0.0,  1/w*(1-np.cos(w*dt)), 1.0,      1/w*np.sin(w*dt),       0.0,    0.0,     0.0],
@@ -71,7 +73,6 @@ class Target():
              [0.0,  0.0,                  0.0,      0.0,                    1.0,     dt,     0.0],
              [0.0,  0.0,                  0.0,      0.0,                    0.0,    1.0,     0.0],
              [0.0,  0.0,                  0.0,      0.0,                    0.0,    0.0,     1.0]]
-        
         
         Xe = np.matmul(F,X)
 

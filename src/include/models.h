@@ -37,7 +37,8 @@ struct FuncConstTurn
 
         M Xue(Xu.rows(),Xu.cols());
         double w = Xu.col(ENUM_TO_INT(SizeMat::COL0))(ENUM_TO_INT(CoordPositionMat::W));
-
+        if (w == 0)
+            w = 1e-9;
         for (int i = 0; i < Xu.cols(); i++)
         {
 
