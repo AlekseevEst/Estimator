@@ -6,7 +6,7 @@ class BindUkf
 {
 private:
 
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel,FuncMeasSph> ukf;
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn,FuncMeasSph> ukf;
  
 public:
     
@@ -22,7 +22,7 @@ public:
     {
         return ukf.predict();
     }
-    Eigen::MatrixXd corrUkf(Eigen::MatrixXd &Z)
+    Eigen::MatrixXd corrUkf(const Eigen::MatrixXd &Z)
     {
         return ukf.correct(Z);
     }

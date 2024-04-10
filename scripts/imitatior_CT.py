@@ -13,15 +13,19 @@ from models import Target
 dt = 6.0
 pd = 1.0
 
-R = np.diag([1.0, 1e-4, 1e-4, 10.0])
+R = np.diag([10.0, 0.01, 0.01, 25.0])
+
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
+
+   
 
 # =============== Блок 1 ===================
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.0}) 
+w = 0.098
+tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':w}) # к ключам добавить ax и ay будет модель CA 
 
 
 def remove_zero_columns(arr):
@@ -44,8 +48,8 @@ def make_pass(X_true_data, pd): #при pd = 1 пропусков не буде�
 
 
 def make_true (tg1): 
-    n = 100 # количество измерении
-
+    n = 6 # количество измерении 
+    # n = np.pi*r
     x1=[];y1=[];z1=[]; vx1=[];vy1=[];vz1=[]; w=[]  
     for i in range(n):
         state1 = tg1.CT(dt)
@@ -57,7 +61,7 @@ def make_true (tg1):
         vz1.append(state1['vz'])
         w.append(state1['w'])
 
-    X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1])              
+    X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1,w])              
     plt.plot(x1,y1,'b')
     plt.grid(True)
     return (X_true_data_not_pass)
@@ -79,98 +83,95 @@ fig2.show()
 
 # # ================= Блок 2 =================
 # # создание истинной зашумленной траектории
-# process_var = 0.5
-# Qp = np.diag([process_var, process_var, process_var])
-# G = np.array([[dt**2/2,  0.0,         0.0],
-#              [dt,       0.0,          0.0],
-#              [0.0,      dt**2/2,      0.0],
-#              [0.0,      dt,           0.0],
-#              [0.0,      0.0,      dt**2/2],
-#              [0.0,      0.0,      dt     ]])
-# Q = G@Qp@G.T
+process_var = 0.5
+Qp = np.diag([process_var, process_var, process_var, 0.0001])
+G = np.array([[dt**2/2,  0.0,         0.0, 0.0],
+             [dt,       0.0,          0.0, 0.0],
+             [0.0,      dt**2/2,      0.0, 0.0],
+             [0.0,      dt,           0.0, 0.0],
+             [0.0,      0.0,      dt**2/2, 0.0],
+             [0.0,      0.0,      dt     , 0.0],
+             [0.0,      0.0,      0.0    , dt]])
+Q = G@Qp@G.T
+def add_process_noise(X, Var):
+    X_true_plus_ProcNoise = X + np.sqrt(Var) @ np.random.normal(loc=0, scale=1.0, size=(X.shape[0], X.shape[1]))
+    return X_true_plus_ProcNoise
+X_true_plus_ProcNoise = add_process_noise(X_true_data_not_pass, Q) # движение цели по модели
+
+X_true_plus_ProcNoise_with_pass = add_process_noise(X_true_data_with_pass, Q) # движение цели, но с пропусками
+
+#=================================================================
+#построение графика истинной зашумленной траектории с пропусками
+
+X_true_plus_ProcNoise_not_pass = X_true_plus_ProcNoise_with_pass
+X_true_plus_ProcNoise_not_pass[:,pass_index] = 0
+X_true_plus_ProcNoise_not_pass = X_true_plus_ProcNoise_with_pass[:, ~pass_index] # вырезаю пропуски, что построить график
+# print("X_true_plus_ProcNoise_not_pass" , X_true_plus_ProcNoise_not_pass)
+plt.plot(X_true_plus_ProcNoise_not_pass[0],X_true_plus_ProcNoise_not_pass[2], label='X_true_plus_ProcNoise+pass', linestyle='-', marker='o')
+plt.legend()
+# print("X_true+noise", X_true_plus_ProcNoise)
 
 
-# def add_process_noise(X, Var):
-#     X_true_plus_ProcNoise = X + np.sqrt(Var) @ np.random.normal(loc=0, scale=1.0, size=(X.shape[0], X.shape[1]))
-#     return X_true_plus_ProcNoise
+# ================= Блок 3 =====================
 
-# X_true_plus_ProcNoise = add_process_noise(X_true_data_not_pass, Q) # движение цели по модели
-
-# X_true_plus_ProcNoise_with_pass = add_process_noise(X_true_data_with_pass, Q) # движение цели, но с пропусками
-
-# #=================================================================
-# #построение графика истинной зашумленной траектории с пропусками
-
-# X_true_plus_ProcNoise_not_pass = X_true_plus_ProcNoise_with_pass
-# X_true_plus_ProcNoise_not_pass[:,pass_index] = 0
-# X_true_plus_ProcNoise_not_pass = X_true_plus_ProcNoise_with_pass[:, ~pass_index] # вырезаю пропуски, что построить график
-# # print("X_true_plus_ProcNoise_not_pass" , X_true_plus_ProcNoise_not_pass)
-# plt.plot(X_true_plus_ProcNoise_not_pass[0],X_true_plus_ProcNoise_not_pass[2], label='X_true_plus_ProcNoise+pass', linestyle='-', marker='o')
-# plt.legend()
-# # print("X_true+noise", X_true_plus_ProcNoise)
-
-
-# # ================= Блок 3 =====================
-
-# def Zsph2cart(Z):
+def Zsph2cart(Z):
     
-#     x = Z[0] * np.cos(Z[1]) * np.cos(Z[2])
-#     y = Z[0] * np.sin(Z[1]) * np.cos(Z[2])
-#     z = Z[0] * np.sin(Z[2])
-#     Z_cart = np.vstack((x,y,z))
-#     return Z_cart
+    x = Z[0] * np.cos(Z[1]) * np.cos(Z[2])
+    y = Z[0] * np.sin(Z[1]) * np.cos(Z[2])
+    z = Z[0] * np.sin(Z[2])
+    Z_cart = np.vstack((x,y,z))
+    return Z_cart
 
-# def do_measurement(X_plusProcNoise,R, pass_index):
+def do_measurement(X_plusProcNoise,R, pass_index):
 
-#     X_plusProcNoise[:, pass_index] = 0
-#     r_true_with_noise = np.sqrt(np.array(X_plusProcNoise[0])**2 + np.array(X_plusProcNoise[2])**2 + np.array(X_plusProcNoise[4])**2)
-#     az_true_with_noise = np.arctan2(np.array(X_plusProcNoise[2]),np.array(X_plusProcNoise[0])) # Азимут
-#     um_true_with_noise = np.arctan2(np.array(X_plusProcNoise[4]),np.sqrt(np.array(X_plusProcNoise[0])**2+np.array(X_plusProcNoise[2])**2)) # Угол места
+    X_plusProcNoise[:, pass_index] = 0
+    r_true_with_noise = np.sqrt(np.array(X_plusProcNoise[0])**2 + np.array(X_plusProcNoise[2])**2 + np.array(X_plusProcNoise[4])**2)
+    az_true_with_noise = np.arctan2(np.array(X_plusProcNoise[2]),np.array(X_plusProcNoise[0])) # Азимут
+    um_true_with_noise = np.arctan2(np.array(X_plusProcNoise[4]),np.sqrt(np.array(X_plusProcNoise[0])**2+np.array(X_plusProcNoise[2])**2)) # Угол места
 
-#     vr_with_noise = (np.array(X_plusProcNoise[0])*np.array(X_plusProcNoise[1]) + np.array(X_plusProcNoise[2])*np.array(X_plusProcNoise[3]) + np.array(X_plusProcNoise[4])* np.array(X_plusProcNoise[5])) / r_true_with_noise 
-#     vr_with_noise = np.nan_to_num(vr_with_noise, nan=0.)
+    vr_with_noise = (np.array(X_plusProcNoise[0])*np.array(X_plusProcNoise[1]) + np.array(X_plusProcNoise[2])*np.array(X_plusProcNoise[3]) + np.array(X_plusProcNoise[4])* np.array(X_plusProcNoise[5])) / r_true_with_noise 
+    vr_with_noise = np.nan_to_num(vr_with_noise, nan=0.)
 
-#     Zm = np.zeros((R.shape[0], X_plusProcNoise.shape[1]))
-#     for i in range(Zm.shape[1]):
-#         Zm[0,i] = r_true_with_noise[i]
-#         Zm[1,i] = az_true_with_noise[i]
-#         Zm[2,i] = um_true_with_noise[i]
-#         Zm[3,i] = vr_with_noise[i]
+    Zm = np.zeros((R.shape[0], X_plusProcNoise.shape[1]))
+    for i in range(Zm.shape[1]):
+        Zm[0,i] = r_true_with_noise[i]
+        Zm[1,i] = az_true_with_noise[i]
+        Zm[2,i] = um_true_with_noise[i]
+        Zm[3,i] = vr_with_noise[i]
 
-#     Z_plus_noise = Zm + np.sqrt(R) @ np.random.normal(loc=0, scale=math.sqrt(1.0), size=(Zm.shape[0], Zm.shape[1]))
-#     Z_plus_noise[:, pass_index] = 0
+    Z_plus_noise = Zm + np.sqrt(R) @ np.random.normal(loc=0, scale=math.sqrt(1.0), size=(Zm.shape[0], Zm.shape[1]))
+    Z_plus_noise[:, pass_index] = 0
 
-#     return Z_plus_noise
+    return Z_plus_noise
 
-# Z = do_measurement (X_true_plus_ProcNoise_with_pass, R, pass_index)
-
-
+Z = do_measurement (X_true_plus_ProcNoise_with_pass, R, pass_index)
+print("Z",Z)
 # #==================Отрисовка==================
-# Z_not_pass = Z
-# Z_not_pass = remove_zero_columns(Z_not_pass)
-# Zc = Zsph2cart(Z_not_pass)
-# plt.plot(Zc[0],Zc[1], label='do_meas', linestyle='-', marker='x')
-# plt.legend()
+Z_not_pass = Z
+Z_not_pass = remove_zero_columns(Z_not_pass)
+Zc = Zsph2cart(Z_not_pass)
+plt.plot(Zc[0],Zc[1], label='do_meas', linestyle='-', marker='x')
+plt.legend()
 
 # # ================= Блок 4 ===================
-# k = 1.0
-# def estimate (Z):
+k = 1.0
+def estimate (Z):
 
-#     Z_cart = Zsph2cart(Z)
-#     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
+    Z_cart = Zsph2cart(Z)
+    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.,0.0000001]) # инициализируем вектор состояния, равный первому измерению
 
-#     ukf = estimator.BindTrackUkf(X0,dt,Qp,R,k) #инициал. фильтра
-#     X_c = np.empty((len(X0), 0))
-#     for i in range (Z.shape[1]-1):
-#         if np.all(Z[:,i+1] == 0):
-#             X = ukf.step(dt)
-#             X_c = np.append(X_c,X,axis=1)
-#             continue
-#         X = ukf.step(Z[:,i+1])
-#         X_c = np.append(X_c,X,axis=1)
-#     return X_c 
+    ukf = estimator.BindTrackUkf(X0,dt,Qp,R,k) #инициал. фильтра
+    X_c = np.empty((len(X0), 0))
+    for i in range (Z.shape[1]-1):
+        if np.all(Z[:,i+1] == 0):
+            X = ukf.step(dt)
+            X_c = np.append(X_c,X,axis=1)
+            continue
+        X = ukf.step(Z[:,i+1])
+        X_c = np.append(X_c,X,axis=1)
+    return X_c 
 
-# X_c = estimate(Z)
+X_c = estimate(Z)
 
 # def err1(X_c,X_true_plus_ProcNoise):
 
@@ -182,12 +183,12 @@ fig2.show()
 
 
 # #==================Отрисовка==================
-# Z_cart = Zsph2cart(Z)
-# plt.figure()
-# plt.plot(X_c[0], X_c[2], label='Correct', marker='o')
-# plt.plot(X_true_plus_ProcNoise[0],X_true_plus_ProcNoise[2], label='truth', marker='x')
-# plt.plot(Zc[0], Zc[1], label='Meas',marker='o')
-# plt.legend()
+Z_cart = Zsph2cart(Z)
+plt.figure()
+plt.plot(X_c[0], X_c[2], label='Correct', marker='o')
+plt.plot(X_true_plus_ProcNoise[0],X_true_plus_ProcNoise[2], label='truth', marker='x')
+plt.plot(Zc[0], Zc[1], label='Meas',marker='o')
+plt.legend()
 
 
 # # ================= Блок 5 ===================

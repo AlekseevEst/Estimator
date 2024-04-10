@@ -45,8 +45,8 @@ M UnscentedKalmanFilterMath<M>::make_P_cart(const M& P, const M& X)
     {
         M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
         Measurement measZ0 = Utils<M>::make_Z0(X);
-
-        M P0 = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas));
+        int numOfParameters = X.rows();
+        M P0 = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
         n = P0.cols();
         return P0;
     }

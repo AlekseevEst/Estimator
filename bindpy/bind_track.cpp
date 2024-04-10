@@ -4,7 +4,7 @@ namespace py = pybind11;
 class BindTrackUkf
 {
 private:
-    Track<Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSph>> track;
+    Track<Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSph>> track;
 
 public:
     BindTrackUkf(Eigen::MatrixXd state,
