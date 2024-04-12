@@ -184,7 +184,7 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
         0.0, T, 0.0, 0.0,
         0.0, 0.0, (T * T) / 2.0, 0.0,
         0.0, 0.0, T, 0.0,
-        0.0, 0.0, 0.0, T;
+        0.0, 0.0, 0.0, 0.0;
 
     M Qp = (G * Q) * G.transpose();
     return Qp;

@@ -1,13 +1,13 @@
 #include "bind_track.h"
 namespace py = pybind11;
 
-class BindTrackUkf
+class BindTrackUkf_CT
 {
 private:
     Track<Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSph>> track;
 
 public:
-    BindTrackUkf(Eigen::MatrixXd state,
+    BindTrackUkf_CT(Eigen::MatrixXd state,
                  double t,
                  Eigen::MatrixXd processNoise,
                  Eigen::MatrixXd measureNoise,
@@ -24,10 +24,10 @@ public:
     }
 };
 
-void bind_track(pybind11::module &m)
+void bind_track_CT(pybind11::module &m)
 {
-    py::class_<BindTrackUkf>(m, "BindTrackUkf")
+    py::class_<BindTrackUkf_CT>(m, "BindTrackUkf_CT")
         .def(py::init<const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, double>())
-        .def("step", (Eigen::MatrixXd(BindTrackUkf::*)(const Eigen::MatrixXd &)) & BindTrackUkf::step)
-        .def("step", (Eigen::MatrixXd(BindTrackUkf::*)()) & BindTrackUkf::step);
+        .def("step", (Eigen::MatrixXd(BindTrackUkf_CT::*)(const Eigen::MatrixXd &)) & BindTrackUkf_CT::step)
+        .def("step", (Eigen::MatrixXd(BindTrackUkf_CT::*)()) & BindTrackUkf_CT::step);
 }
