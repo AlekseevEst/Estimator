@@ -48,9 +48,11 @@ M UnscentedKalmanFilterMath<M>::make_P_cart(const M& P, const M& X)
         int numOfParameters = X.rows();
         M P0 = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
         n = P0.cols();
+        PRINTM(P0);
         return P0;
     }
     return P;
+    std::cout<<"P_make_P_cart"<<P<<std::endl;
 }
 
 template <class M>
@@ -185,6 +187,7 @@ M UnscentedKalmanFilterMath<M>::correctState(const M &Xe, const M &Z, const M &Z
 
 {
     M X = Xe + K * (Z - Ze);
+    PRINTM(X);
     return X;
 }
 
@@ -192,7 +195,7 @@ template <class M>
 M UnscentedKalmanFilterMath<M>::correctCov(const M &Pe, const M &K, const M &Se)
 {
     M P = Pe - (K * Se) * K.transpose();
-
+    PRINTM(P);
     if (Utils<M>::CheckingConditionsMat(P)) // проверка на симметричность, положительно определённость и не вырожденность
         return P;
     else

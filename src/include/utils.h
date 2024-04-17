@@ -4,7 +4,7 @@
 #include "structs.h"
 
 #define ENUM_TO_INT(x) static_cast<int>(x)
-
+#define PRINTM(x) std::cerr << #x << std::endl << x << std::endl<< __FILE__ << ":" << __LINE__ << std::endl << std::endl
 template <class M> 
 class Utils
 {
@@ -184,7 +184,7 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
         0.0, T, 0.0, 0.0,
         0.0, 0.0, (T * T) / 2.0, 0.0,
         0.0, 0.0, T, 0.0,
-        0.0, 0.0, 0.0, 0.0;
+        0.0, 0.0, 0.0, T;
 
     M Qp = (G * Q) * G.transpose();
     return Qp;
