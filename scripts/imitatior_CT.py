@@ -73,12 +73,12 @@ X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
 
 with_pass = remove_zero_columns(X_true_data_with_pass)
 # Создаем трехмерный scatter plot для массива
-scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[2], z=with_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
-fig2.add_trace(scatter2)
+# scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[2], z=with_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
+# fig2.add_trace(scatter2)
 
-# Обновляем параметры макета
-fig2.update_layout(scene=dict(aspectmode="cube"))
-fig2.show()
+# # Обновляем параметры макета
+# fig2.update_layout(scene=dict(aspectmode="cube"))
+# fig2.show()
 
 
 # # ================= Блок 2 =================

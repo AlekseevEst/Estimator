@@ -13,7 +13,7 @@ public:
     static M rot_Z(const double &val);
     static M rot_Y(const double &val);
     static std::pair<M, M> sph2cartcov(const M &sphCov, const double &r, const double &az, const double &el);
-    static M do_cart_P(std::pair<M, M> cartCov, int numOfParameters);
+    static M do_cart_P0(std::pair<M, M> cartCov, int numOfParameters);
     static M doMatrixNoiseProc_Q(M procVar, double T);
     static Measurement make_Z0(const M &X);
     static M RsphRad2RsphDeg(const M &R);
@@ -134,7 +134,7 @@ std::pair<M, M> Utils<M>::sph2cartcov(const M &sphCov, const double &r, const do
 }
 
 template <class M>
-M Utils<M>::do_cart_P(std::pair<M, M> cartCov, int numOfParameters)
+M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
 {
     M posCov = cartCov.first;
     M velCov = cartCov.second;
@@ -173,7 +173,7 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
             0.0, T, 0.0,
             0.0, 0.0, (T * T) / 2.0,
             0.0, 0.0, T;
-        M Qp = (G * Q) * G.transpose();
+        M Qp = G * Q * G.transpose();
         return Qp;
     }
 
@@ -186,7 +186,7 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
         0.0, 0.0, T, 0.0,
         0.0, 0.0, 0.0, T;
 
-    M Qp = (G * Q) * G.transpose();
+    M Qp = G * Q * G.transpose();
     return Qp;
 }
 

@@ -46,13 +46,13 @@ M UnscentedKalmanFilterMath<M>::make_P_cart(const M& P, const M& X)
         M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
         Measurement measZ0 = Utils<M>::make_Z0(X);
         int numOfParameters = X.rows();
-        M P0 = Utils<M>::do_cart_P(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
+        M P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
         n = P0.cols();
         PRINTM(P0);
         return P0;
     }
+    PRINTM(P);
     return P;
-    std::cout<<"P_make_P_cart"<<P<<std::endl;
 }
 
 template <class M>
@@ -62,6 +62,7 @@ M UnscentedKalmanFilterMath<M>::sqrt_matrix_p(const M& P)
 
     M L = Utils<M>::CholeskyLowerTriangularTransposition(P);
     M U = sqrt(n + kappa) * L; // Масшатбирующий коэффициент умноженный на Матричный корень
+    PRINTM(U);
     return U;
 }
 
@@ -73,17 +74,18 @@ M UnscentedKalmanFilterMath<M>::doSigmaVectors(const M& X, const M& U)
     M Xu(X.rows(),2*n+1);
     // Первый компонент
     Xu.col(0) = X; // в качестве первого сигма вектора берется текущий вектор состояния.
-
+    PRINTM(Xu.col(0));
     // Второй компонент. В качестве n/2 берется сумма среднего и некоторого отклонения U.col(i)
     for (size_t i = 0; i < n; i++)
     {   
         Xu.col(i + 1) = X + U.col(i);
+        PRINTM(Xu.col(i + 1));
     }
     // Третий компонент. В качестве n/2 берется разность среднего и некоторого отклонения U.col(i)
     for (size_t i = 0; i < n; i++)
     {  
         Xu.col(i + n + 1) = X - U.col(i);
-
+        PRINTM(Xu.col(i + n + 1));
     }
     
     return Xu;
@@ -116,6 +118,7 @@ M UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(const M &Xue, std::vec
     {
         Xe = Xe + w[i] * Xue.col(i);
     }
+    PRINTM(Xe);
     return Xe;
     
 }
@@ -134,6 +137,7 @@ M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, co
     }
 
     Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
+    PRINTM(Pe);
     return Pe;
 }
 
@@ -146,6 +150,7 @@ M UnscentedKalmanFilterMath<M>::doExtrapolatedMeasVector(const M &Zue, std::vect
     {
         Ze = Ze + w[i] * Zue.col(i);
     }
+    PRINTM(Ze);
     return Ze;
 }
 
@@ -161,6 +166,7 @@ M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedMeasVector(const M &Zue, con
         Pzz = Pzz + w[i] * (v * v.transpose());
     }
     M Se = Pzz + R_sph_rad;
+    PRINTM(Se);
     return Se;
 }
 
@@ -179,6 +185,7 @@ M UnscentedKalmanFilterMath<M>::calcGainFilter(const M &Xue, const M &Xe, const 
     }
 
     M gainKalman = Pxz * Se.inverse();
+    PRINTM(gainKalman);
     return gainKalman;
 }
 

@@ -53,7 +53,7 @@ struct FuncConstTurn
             
             Xue.col(i) = F * Xu.col(i); 
         }
-        
+        PRINTM(Xue);
         return Xue;
     }
 
