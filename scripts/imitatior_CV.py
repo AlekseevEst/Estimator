@@ -56,7 +56,6 @@ def make_true (tg1):
         vx1.append(state1['vx'])
         vy1.append(state1['vy'])
         vz1.append(state1['vz'])
-        # w.append(state1['w'])
 
     X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1])             
     # plt.plot(x1,y1,'b')
@@ -138,13 +137,16 @@ Z, Zvr = do_measurement (X_true_plus_ProcNoise_with_pass, R_with_vr, pass_index)
 Ztmp = remove_zero_columns(Z)
 Zc = Zsph2cart(Ztmp)
 # ================= Блок 4 ===================
-k = 1.0
 def estimate (Z):
 
     Z_cart = Zsph2cart(Z)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
-
-    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_without_vr,k) #инициал. фильтра
+    point = estimator.Points()
+    point.alpha = 1e-3
+    point.beta = 2
+    point.kappa = 3 - X0.shape[0]
+    print("kappa",3-X0.shape[0])
+    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_without_vr,point) #инициал. фильтра
     
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
@@ -160,8 +162,11 @@ def estimate_with_vr (Zvr):
 
     Z_cart = Zsph2cart(Zvr)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
-
-    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_with_vr,k) #инициал. фильтра
+    point = estimator.Points()
+    point.alpha = 1e-3
+    point.beta = 2
+    point.kappa = 3 - X0.shape[0]
+    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_with_vr,point) #инициал. фильтра
     
     X_c = np.empty((len(X0), 0))
     for i in range (Zvr.shape[1]-1):
@@ -197,147 +202,147 @@ plt.legend()
 
 
 # ================= Блок 5 ===================
-# СБОР СТАТИСТИКИ
+# # СБОР СТАТИСТИКИ
 
-def calc_err(X):
+# def calc_err(X):
 
-    Xn = add_process_noise(X, Q)
-    X_pass, pass_id = make_pass(Xn,pd)
-    Zn,Zvr = do_measurement(X_pass, R_with_vr, pass_id)
-    X_c = estimate(Zn)
-    X_c_with_Vr = estimate_with_vr(Zvr)
+#     Xn = add_process_noise(X, Q)
+#     X_pass, pass_id = make_pass(Xn,pd)
+#     Zn,Zvr = do_measurement(X_pass, R_with_vr, pass_id)
+#     X_c = estimate(Zn)
+#     X_c_with_Vr = estimate_with_vr(Zvr)
 
-    err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
-    err_with_vr = X_c_with_Vr[:,:] - Xn [:,1:]
-    # print("ошибка в статистике calc_err",err[0])
+#     err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
+#     err_with_vr = X_c_with_Vr[:,:] - Xn [:,1:]
+#     # print("ошибка в статистике calc_err",err[0])
 
-    return err, err_with_vr
+#     return err, err_with_vr
 
-from tqdm import tqdm
+# from tqdm import tqdm
 
-def calc_std_err(X):
-    num_iterations = 2000
-    var_err = np.zeros((X.shape[0], X.shape[1]-1))
-    var_err_with_vr = np.zeros((X.shape[0], X.shape[1]-1))
+# def calc_std_err(X):
+#     num_iterations = 2000
+#     var_err = np.zeros((X.shape[0], X.shape[1]-1))
+#     var_err_with_vr = np.zeros((X.shape[0], X.shape[1]-1))
 
-    for i in tqdm(range(num_iterations)):
-        err,err_with_vr = calc_err(X)
-        var_err += err ** 2
-        var_err_with_vr += err_with_vr**2
+#     for i in tqdm(range(num_iterations)):
+#         err,err_with_vr = calc_err(X)
+#         var_err += err ** 2
+#         var_err_with_vr += err_with_vr**2
 
-    var_err /= num_iterations
-    var_err_with_vr /= num_iterations
-    return np.sqrt(var_err), np.sqrt(var_err_with_vr)
+#     var_err /= num_iterations
+#     var_err_with_vr /= num_iterations
+#     return np.sqrt(var_err), np.sqrt(var_err_with_vr)
 
-std_err, std_err_with_vr = calc_std_err(X_true_data_not_pass)
+# std_err, std_err_with_vr = calc_std_err(X_true_data_not_pass)
 
-plt.figure(num="not Vr")
-plt.subplot(6, 1, 1)
-plt.plot((np.arange(len(std_err[0, :]))+2)*dt, std_err[0, :])
-plt.xlabel('Time,s')
-plt.ylabel('std_x, met')
-plt.grid(True)
-plt.subplot(6, 1, 2)
-plt.plot((np.arange(len(std_err[1, :]))+2)*dt, std_err[1, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vx, m/s')
-plt.subplot(6, 1, 3)
-plt.plot((np.arange(len(std_err[2, :]))+2)*dt, std_err[2, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_y, met')
-plt.subplot(6, 1, 4)
-plt.plot((np.arange(len(std_err[3, :]))+2)*dt, std_err[3, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vy, m/s')
-plt.subplot(6, 1, 5)
-plt.plot((np.arange(len(std_err[4, :]))+2)*dt, std_err[4, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_z, met')
-plt.subplot(6, 1, 6)
-plt.plot((np.arange(len(std_err[5, :]))+2)*dt, std_err[5, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vz, m/s')
-plt.subplots_adjust(wspace=12.0, hspace=1.0)
-
-
-plt.figure(num="with Vr")
-plt.subplot(6, 1, 1)
-plt.plot((np.arange(len(std_err_with_vr[0, :]))+2)*dt, std_err_with_vr[0, :])
-plt.xlabel('Time,s')
-plt.ylabel('std_x, met')
-plt.grid(True)
-plt.subplot(6, 1, 2)
-plt.plot((np.arange(len(std_err_with_vr[1, :]))+2)*dt, std_err_with_vr[1, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vx, m/s')
-plt.subplot(6, 1, 3)
-plt.plot((np.arange(len(std_err_with_vr[2, :]))+2)*dt, std_err_with_vr[2, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_y, met')
-plt.subplot(6, 1, 4)
-plt.plot((np.arange(len(std_err_with_vr[3, :]))+2)*dt, std_err_with_vr[3, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vy, m/s')
-plt.subplot(6, 1, 5)
-plt.plot((np.arange(len(std_err_with_vr[4, :]))+2)*dt, std_err_with_vr[4, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_z, met')
-plt.subplot(6, 1, 6)
-plt.plot((np.arange(len(std_err_with_vr[5, :]))+2)*dt, std_err_with_vr[5, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vz, m/s')
-plt.subplots_adjust(wspace=12.0, hspace=1.0)
-
-plt.figure(num="together")
-plt.subplot(6, 1, 1)
-plt.plot((np.arange(len(std_err[0, :]))+2)*dt, std_err[0, :], label='not Vr')
-plt.plot((np.arange(len(std_err_with_vr[0, :]))+2)*dt, std_err_with_vr[0, :], label='Vr')
-plt.xlabel('Time,s')
-plt.ylabel('std_x, met')
-plt.grid(True)
-plt.subplot(6, 1, 2)
-plt.plot((np.arange(len(std_err[1, :]))+2)*dt, std_err[1, :], label='not Vr')
-plt.plot((np.arange(len(std_err_with_vr[1, :]))+2)*dt, std_err_with_vr[1, :], label='Vr')
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vx, m/s')
-plt.subplot(6, 1, 3)
-plt.plot((np.arange(len(std_err[2, :]))+2)*dt, std_err[2, :], label='not Vr')
-plt.plot((np.arange(len(std_err_with_vr[2, :]))+2)*dt, std_err_with_vr[2, :], label='Vr')
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_y, met')
-plt.subplot(6, 1, 4)
-plt.plot((np.arange(len(std_err[3, :]))+2)*dt, std_err[3, :], label='not Vr')
-plt.plot((np.arange(len(std_err_with_vr[3, :]))+2)*dt, std_err_with_vr[3, :], label='Vr')
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vy, m/s')
-plt.subplot(6, 1, 5)
-plt.plot((np.arange(len(std_err[4, :]))+2)*dt, std_err[4, :], label='not Vr')
-plt.plot((np.arange(len(std_err_with_vr[4, :]))+2)*dt, std_err_with_vr[4, :], label='Vr')
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_z, met')
-plt.subplot(6, 1, 6)
-plt.plot((np.arange(len(std_err[5, :]))+2)*dt, std_err[5, :], label='not Vr')
-plt.plot((np.arange(len(std_err_with_vr[5, :]))+2)*dt, std_err_with_vr[5, :], label='Vr')
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vz, m/s')
+# plt.figure(num="not Vr")
+# plt.subplot(6, 1, 1)
+# plt.plot((np.arange(len(std_err[0, :]))+2)*dt, std_err[0, :])
+# plt.xlabel('Time,s')
+# plt.ylabel('std_x, met')
+# plt.grid(True)
+# plt.subplot(6, 1, 2)
+# plt.plot((np.arange(len(std_err[1, :]))+2)*dt, std_err[1, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vx, m/s')
+# plt.subplot(6, 1, 3)
+# plt.plot((np.arange(len(std_err[2, :]))+2)*dt, std_err[2, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_y, met')
+# plt.subplot(6, 1, 4)
+# plt.plot((np.arange(len(std_err[3, :]))+2)*dt, std_err[3, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vy, m/s')
+# plt.subplot(6, 1, 5)
+# plt.plot((np.arange(len(std_err[4, :]))+2)*dt, std_err[4, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_z, met')
+# plt.subplot(6, 1, 6)
+# plt.plot((np.arange(len(std_err[5, :]))+2)*dt, std_err[5, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vz, m/s')
+# plt.subplots_adjust(wspace=12.0, hspace=1.0)
 
 
-plt.subplots_adjust(wspace=12.0, hspace=0.5)
-plt.legend(bbox_to_anchor=(1, 1), loc='upper left')
+# plt.figure(num="with Vr")
+# plt.subplot(6, 1, 1)
+# plt.plot((np.arange(len(std_err_with_vr[0, :]))+2)*dt, std_err_with_vr[0, :])
+# plt.xlabel('Time,s')
+# plt.ylabel('std_x, met')
+# plt.grid(True)
+# plt.subplot(6, 1, 2)
+# plt.plot((np.arange(len(std_err_with_vr[1, :]))+2)*dt, std_err_with_vr[1, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vx, m/s')
+# plt.subplot(6, 1, 3)
+# plt.plot((np.arange(len(std_err_with_vr[2, :]))+2)*dt, std_err_with_vr[2, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_y, met')
+# plt.subplot(6, 1, 4)
+# plt.plot((np.arange(len(std_err_with_vr[3, :]))+2)*dt, std_err_with_vr[3, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vy, m/s')
+# plt.subplot(6, 1, 5)
+# plt.plot((np.arange(len(std_err_with_vr[4, :]))+2)*dt, std_err_with_vr[4, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_z, met')
+# plt.subplot(6, 1, 6)
+# plt.plot((np.arange(len(std_err_with_vr[5, :]))+2)*dt, std_err_with_vr[5, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vz, m/s')
+# plt.subplots_adjust(wspace=12.0, hspace=1.0)
+
+# plt.figure(num="together")
+# plt.subplot(6, 1, 1)
+# plt.plot((np.arange(len(std_err[0, :]))+2)*dt, std_err[0, :], label='not Vr')
+# plt.plot((np.arange(len(std_err_with_vr[0, :]))+2)*dt, std_err_with_vr[0, :], label='Vr')
+# plt.xlabel('Time,s')
+# plt.ylabel('std_x, met')
+# plt.grid(True)
+# plt.subplot(6, 1, 2)
+# plt.plot((np.arange(len(std_err[1, :]))+2)*dt, std_err[1, :], label='not Vr')
+# plt.plot((np.arange(len(std_err_with_vr[1, :]))+2)*dt, std_err_with_vr[1, :], label='Vr')
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vx, m/s')
+# plt.subplot(6, 1, 3)
+# plt.plot((np.arange(len(std_err[2, :]))+2)*dt, std_err[2, :], label='not Vr')
+# plt.plot((np.arange(len(std_err_with_vr[2, :]))+2)*dt, std_err_with_vr[2, :], label='Vr')
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_y, met')
+# plt.subplot(6, 1, 4)
+# plt.plot((np.arange(len(std_err[3, :]))+2)*dt, std_err[3, :], label='not Vr')
+# plt.plot((np.arange(len(std_err_with_vr[3, :]))+2)*dt, std_err_with_vr[3, :], label='Vr')
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vy, m/s')
+# plt.subplot(6, 1, 5)
+# plt.plot((np.arange(len(std_err[4, :]))+2)*dt, std_err[4, :], label='not Vr')
+# plt.plot((np.arange(len(std_err_with_vr[4, :]))+2)*dt, std_err_with_vr[4, :], label='Vr')
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_z, met')
+# plt.subplot(6, 1, 6)
+# plt.plot((np.arange(len(std_err[5, :]))+2)*dt, std_err[5, :], label='not Vr')
+# plt.plot((np.arange(len(std_err_with_vr[5, :]))+2)*dt, std_err_with_vr[5, :], label='Vr')
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vz, m/s')
+
+
+# plt.subplots_adjust(wspace=12.0, hspace=0.5)
+# plt.legend(bbox_to_anchor=(1, 1), loc='upper left')
 plt.show()
 

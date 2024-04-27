@@ -1,6 +1,7 @@
 #include "bind_track.h"
 namespace py = pybind11;
 
+// Points Points_CV;
 class BindTrackUkf_CV
 {
 private:
@@ -11,7 +12,7 @@ public:
                  double t,
                  Eigen::MatrixXd processNoise,
                  Eigen::MatrixXd measureNoise,
-                 double k) : track(state, t, processNoise, measureNoise, k) {}
+                 Points points) : track(state, t, processNoise, measureNoise, points) {}
 
     Eigen::MatrixXd step(const Eigen::MatrixXd &meas)
     {
@@ -27,7 +28,9 @@ public:
 void bind_track_CV(pybind11::module &m)
 {
     py::class_<BindTrackUkf_CV>(m, "BindTrackUkf_CV")
-        .def(py::init<const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, double>())
+        .def(py::init<const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, Points>())
         .def("step", (Eigen::MatrixXd(BindTrackUkf_CV::*)(const Eigen::MatrixXd &)) & BindTrackUkf_CV::step)
         .def("step", (Eigen::MatrixXd(BindTrackUkf_CV::*)()) & BindTrackUkf_CV::step);
+
 }
+

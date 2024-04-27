@@ -1,5 +1,4 @@
 #include "bind_ukf.h"
-
 namespace py = pybind11;
 
 class BindUkf
@@ -14,8 +13,8 @@ public:
                 double dt,
                 Eigen::MatrixXd processNoise,
                 Eigen::MatrixXd measureNoise,
-                double k):              
-                          ukf(state, dt,processNoise,measureNoise,k){}
+                Points points):              
+                          ukf(state, dt, processNoise, measureNoise, points){}
                               
 
     Eigen::MatrixXd predUkf()
@@ -31,7 +30,7 @@ public:
 void bind_ukf(pybind11::module &m)
 {
     py::class_<BindUkf>(m, "BindUkf")
-        .def(py::init<const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, double>())
+        .def(py::init<const Eigen::MatrixXd&, double, const Eigen::MatrixXd&, const Eigen::MatrixXd&, Points>())
         .def("predictUkf",&BindUkf::predUkf)
             // py::arg("X"))
         .def("correctUkf",&BindUkf::corrUkf);

@@ -29,7 +29,13 @@ TEST_CASE("filtering_ukf_CV")
     
     expectedCorrectState << 2389.32, 198.165, 11.6005, 1.93207, 11.6005, 1.93207;
     expectedPredState << 1200.0, 0.0, 0.0, 0.0, 0.0, 0.0;
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSph> ukf (X,t,Q,R,k);
+
+    Points p;
+    p.alpha = 1e-3;
+    p.beta = 2;
+    p.kappa = 0;
+
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSph> ukf (X,t,Q,R,p);
     CHECK(ukf.predict().isApprox(expectedPredState,0.0001));
     CHECK(ukf.correct(Z).isApprox(expectedCorrectState,0.0001));
 
@@ -67,9 +73,13 @@ TEST_CASE("filtering_ukf_CT")
     
     expectedPredState << 99.895, 199.94, 0.612, 4.895, 0.0, 0.0, 0.098;
     expectedCorrectState << 99.792, 199.189, 8.708, 37.255, 8.625, 34.477, 0.098;
+    
+    Points p;
+    p.alpha = 1e-3;
+    p.beta = 2;
+    p.kappa = 0;
 
-
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSph> ukf (X,t,Q,R,k);
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSph> ukf (X,t,Q,R,p);
     CHECK(ukf.predict().isApprox(expectedPredState,0.0001));
     CHECK(ukf.correct(Z).isApprox(expectedCorrectState,0.0001));
 

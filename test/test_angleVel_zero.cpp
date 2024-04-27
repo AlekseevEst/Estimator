@@ -29,8 +29,12 @@ TEST_CASE("angleVel_zero")
 
     expectedPredState << 100.0, 200.0, 0.0, 0.0, 0.0, 0.0, 0.0;
     expectedCorrectState << 99.945, 199.811, 0.863, 3.450, 0.863, 3.450, 0.0;
-    
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSph> ukf (X,t,Q,R,k);
+    Points p;
+    p.alpha = 1e-3;
+    p.beta = 2;
+    p.kappa = 0;
+
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSph> ukf (X,t,Q,R,p);
 
     CHECK(ukf.predict().isApprox(expectedPredState,0.0001));
     CHECK(ukf.correct(Z).isApprox(expectedCorrectState,0.0001));

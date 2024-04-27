@@ -22,7 +22,7 @@ struct FuncConstVel
         {
             Xue.col(i) = F * Xu.col(i); 
         }
-        
+        // PRINTM(Xue);
         return Xue;
     }
 };
@@ -31,7 +31,7 @@ template <class M>
 struct FuncConstTurn
 {
 
-    M operator()(const M &Xu, double T)
+    M operator()(M &Xu, double T)
     {
         M F(ENUM_TO_INT(SizeMat::ROW7),ENUM_TO_INT(SizeMat::COL7));
 
@@ -72,7 +72,7 @@ struct FuncMeasSph
         CoordPositionMat vxPos = CoordPositionMat::VX;
         CoordPositionMat vyPos = CoordPositionMat::VY;
         CoordPositionMat vzPos = CoordPositionMat::VZ;
-
+        
         M Zue(Z.rows(),Xue.cols());
         for (int i = 0; i < Xue.cols(); i++)
         {
@@ -99,6 +99,7 @@ struct FuncMeasSph
 
             Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)), Z(ENUM_TO_INT(azPos)));
         }
+        PRINTM(Zue);
         return Zue;
     }
 };

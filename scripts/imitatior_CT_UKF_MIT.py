@@ -7,13 +7,27 @@ from plotly.subplots import make_subplots
 from scipy.stats import chi2, poisson, uniform, norm
 from IPython.display import clear_output
 import random
-import estimator
+
 from models import Target
+from filterpy.kalman import UnscentedKalmanFilter
+from filterpy.kalman import MerweScaledSigmaPoints
+from filterpy.common import Q_discrete_white_noise
+
+from copy import deepcopy
+from math import log, exp, sqrt
+import sys
+import numpy as np
+from numpy import eye, zeros, dot, isscalar, outer
+from scipy.linalg import cholesky
+from filterpy.kalman import unscented_transform
+from filterpy.stats import logpdf
+from filterpy.common import pretty_str
 
 dt = 0.25
 pd = 1.0
 
-R = np.diag([10000.0, (1.146496815*(np.pi/180.0))**2, (1.146496815*(np.pi/180.0))**2]) #дисперсии, в рад
+R = np.diag([10000.0, (1.146496815*(np.pi/180.0))**2, (1.146496815*(np.pi/180.0)**2)]) # дисперсии
+
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 
@@ -25,6 +39,7 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 tg1 = Target()
 
 tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.098})
+# tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.098})
 
 
 def remove_zero_columns(arr):
@@ -71,13 +86,6 @@ X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
 
 
 with_pass = remove_zero_columns(X_true_data_with_pass)
-# Создаем трехмерный scatter plot для массива
-# scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[2], z=with_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
-# fig2.add_trace(scatter2)
-
-# # Обновляем параметры макета
-# fig2.update_layout(scene=dict(aspectmode="cube"))
-# fig2.show()
 
 
 # # ================= Блок 2 =================
@@ -154,26 +162,58 @@ plt.legend()
 
 # # ================= Блок 4 ===================
 
-def estimate (Z,w):
 
-    Z_cart = Zsph2cart(Z)
-    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.,w]) # инициализируем вектор состояния, равный первому измерению
-    point = estimator.Points()
-    point.alpha = 1e-3
-    point.beta = 2
-    point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CT(X0,dt,Qp,R,point) #инициал. фильтра
-    X_c = np.empty((len(X0), 0))
+def fx(x, dt):
+
+    w = x[6]
+    F = np.array([[1.0,  1/w*np.sin(w*dt),     0.0,      -1/w*(1-np.cos(w*dt)),  0.0,    0.0,     0.0],
+             [0.0,  np.cos(w*dt),         0.0,      -np.sin(w*dt),          0.0,    0.0,     0.0],
+             [0.0,  1/w*(1-np.cos(w*dt)), 1.0,      1/w*np.sin(w*dt),       0.0,    0.0,     0.0],
+             [0.0,  np.sin(w*dt),         0.0,       np.cos(w*dt),          0.0,    0.0,     0.0],
+             [0.0,  0.0,                  0.0,      0.0,                    1.0,     dt,     0.0],
+             [0.0,  0.0,                  0.0,      0.0,                    0.0,    1.0,     0.0],
+             [0.0,  0.0,                  0.0,      0.0,                    0.0,    0.0,     1.0]], dtype=float)
+    return np.dot(F, x)
+
+
+def hx(x):
+
+    range = np.sqrt(np.power(x[0], 2) + pow(x[2], 2) + pow(x[4], 2))
+    az = np.arctan2(x[2], x[0])
+    el = np.arctan2(x[4], np.sqrt(np.power(x[0], 2) + np.power(x[2], 2)))
+
+    return np.array([range, az, el])
+
+points = MerweScaledSigmaPoints(7, alpha=.1, beta=2., kappa=-1)
+
+Z_cart = Zsph2cart(Z)
+
+w1 = 0.00000001
+kf = UnscentedKalmanFilter(dim_x=7, dim_z=3, dt=dt, fx=fx,hx=hx, points=points)
+kf.x = np.array(([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.,w1]))
+kf.P *= 100
+z_std = 0.1 *(np.pi/180.0)
+kf.R = R
+kf.Q = Q#_discrete_white_noise(dim=4, dt=dt, var=0.5**2, block_size=3)
+
+
+def estimate (Z):
+    
+    X_c = np.array([])
     for i in range (Z.shape[1]-1):
-        if np.all(Z[:,i+1] == 0):
-            X = ukf.step(dt)
-            X_c = np.append(X_c,X,axis=1)
-            continue
-        X = ukf.step(Z[:,i+1])
-        X_c = np.append(X_c,X,axis=1)
+        kf.predict()
+        kf.update(Z[:,i])
+        print("kf.x", kf.x)
+        if X_c.size == 0:
+            X_c = kf.x
+        X_c = np.vstack((X_c,kf.x))
     return X_c 
-w = 0.0
-X_c = estimate(Z,w)
+
+
+
+X_c = estimate(Z)
+
+# print(X_c)
 
 # def err1(X_c,X_true_plus_ProcNoise):
 
@@ -187,7 +227,7 @@ X_c = estimate(Z,w)
 # #==================Отрисовка==================
 Z_cart = Zsph2cart(Z)
 plt.figure()
-plt.plot(X_c[0], X_c[2], label='Correct', marker='o')
+plt.plot(X_c[:,0], X_c[:,2], label='Correct', marker='o')
 plt.plot(X_true_plus_ProcNoise[0],X_true_plus_ProcNoise[2], label='truth', marker='x')
 plt.plot(Zc[0], Zc[1], label='Meas',marker='o')
 plt.legend()
@@ -212,7 +252,7 @@ def calc_err(X,w):
 from tqdm import tqdm
 
 def calc_std_err(X,w):
-    num_iterations = 2
+    num_iterations = 2000
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
@@ -222,12 +262,12 @@ def calc_std_err(X,w):
     var_err /= num_iterations
     return np.sqrt(var_err)
 
-tg2G = Target()
-tg2G.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.098})
-n=125
-X_true_data_not_pass_2G = make_true(tg2G,n)
-w = 0.0
-std_err_2G = calc_std_err(X_true_data_not_pass_2G,w)
+# tg2G = Target()
+# tg2G.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.098})
+# n=125
+# X_true_data_not_pass_2G = make_true(tg2G,n)
+# w = 0.098
+# std_err_2G = calc_std_err(X_true_data_not_pass_2G,w)
 
 # tg5G = Target()
 # tg5G.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.245})
@@ -244,43 +284,38 @@ std_err_2G = calc_std_err(X_true_data_not_pass_2G,w)
 # std_err_8G = calc_std_err(X_true_data_not_pass_8G,w)
 
 
-plt.figure(num="2G")
-plt.subplot(7, 1, 1)
-plt.plot((np.arange(len(std_err_2G[0, :]))+1)*dt, std_err_2G[0, :])
-plt.xlabel('Time,s')
-plt.ylabel('std_x, met')
-plt.grid(True)
-plt.subplot(7, 1, 2)
-plt.plot((np.arange(len(std_err_2G[1, :]))+1)*dt, std_err_2G[1, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vx, m/s')
-plt.subplot(7, 1, 3)
-plt.plot((np.arange(len(std_err_2G[2, :]))+1)*dt, std_err_2G[2, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_y, met')
-plt.subplot(7, 1, 4)
-plt.plot((np.arange(len(std_err_2G[3, :]))+1)*dt, std_err_2G[3, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vy, m/s')
-plt.subplot(7, 1, 5)
-plt.plot((np.arange(len(std_err_2G[4, :]))+1)*dt, std_err_2G[4, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_z, met')
-plt.subplot(7, 1, 6)
-plt.plot((np.arange(len(std_err_2G[5, :]))+1)*dt, std_err_2G[5, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_vz, m/s')
-plt.subplot(7, 1, 7)
-plt.plot((np.arange(len(std_err_2G[0, :]))+1)*dt, std_err_2G[0, :])
-plt.xlabel('Time,s')
-plt.ylabel('std_w, rad')
-plt.grid(True)
-plt.subplots_adjust(wspace=12.0, hspace=1.0)
+# plt.figure(num="2G")
+# plt.subplot(6, 1, 1)
+# plt.plot((np.arange(len(std_err_2G[0, :]))+1)*dt, std_err_2G[0, :])
+# plt.xlabel('Time,s')
+# plt.ylabel('std_x, met')
+# plt.grid(True)
+# plt.subplot(6, 1, 2)
+# plt.plot((np.arange(len(std_err_2G[1, :]))+1)*dt, std_err_2G[1, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vx, m/s')
+# plt.subplot(6, 1, 3)
+# plt.plot((np.arange(len(std_err_2G[2, :]))+1)*dt, std_err_2G[2, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_y, met')
+# plt.subplot(6, 1, 4)
+# plt.plot((np.arange(len(std_err_2G[3, :]))+1)*dt, std_err_2G[3, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vy, m/s')
+# plt.subplot(6, 1, 5)
+# plt.plot((np.arange(len(std_err_2G[4, :]))+1)*dt, std_err_2G[4, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_z, met')
+# plt.subplot(6, 1, 6)
+# plt.plot((np.arange(len(std_err_2G[5, :]))+1)*dt, std_err_2G[5, :])
+# plt.grid(True)
+# plt.xlabel('Time,s')
+# plt.ylabel('std_vz, m/s')
+# plt.subplots_adjust(wspace=12.0, hspace=1.0)
 
 
 # plt.figure(num="5G")

@@ -18,7 +18,7 @@ public:
     static Measurement make_Z0(const M &X);
     static M RsphRad2RsphDeg(const M &R);
     static double ComputeAngleDifference(double angle1, double angle2);
-    static M CholeskyLowerTriangularTransposition(const M& P);
+    static M sqrtMat(const M& P);
     static bool CheckingConditionsMat(const M& P);
 
 private:
@@ -155,7 +155,7 @@ M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
     {
         M PAngleVel = M::Zero(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL7));
         PAngleVel.block(ENUM_TO_INT(SizeMat::ROW0),ENUM_TO_INT(SizeMat::COL0),ENUM_TO_INT(SizeMat::ROW6),ENUM_TO_INT(SizeMat::COL6)) = P;
-        PAngleVel(ENUM_TO_INT(SizeMat::ROW6),ENUM_TO_INT(SizeMat::COL6)) = 100.0;
+        PAngleVel(ENUM_TO_INT(SizeMat::ROW6),ENUM_TO_INT(SizeMat::COL6)) = 100.0*(M_PI/180.0);
         return PAngleVel;
     }
     return P;
@@ -167,24 +167,24 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
     if (Q.rows() == ENUM_TO_INT(SizeMat::COL3))
     {
         M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
-        G << (T * T) / 2.0, 0.0, 0.0,
-            T, 0.0, 0.0,
-            0.0, (T * T) / 2.0, 0.0,
-            0.0, T, 0.0,
-            0.0, 0.0, (T * T) / 2.0,
-            0.0, 0.0, T;
+        G << (T * T) / 2.0,          0.0,            0.0,
+                    T,               0.0,            0.0,
+                   0.0,         (T * T) / 2.0,       0.0,
+                   0.0,               T,             0.0,
+                   0.0,              0.0,       (T * T) / 2.0,
+                   0.0,              0.0,             T;
         M Qp = G * Q * G.transpose();
         return Qp;
     }
 
     M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
-    G << (T * T) / 2.0, 0.0, 0.0, 0.0,
-        T, 0.0, 0.0, 0.0,
-        0.0, (T * T) / 2.0, 0.0, 0.0,
-        0.0, T, 0.0, 0.0,
-        0.0, 0.0, (T * T) / 2.0, 0.0,
-        0.0, 0.0, T, 0.0,
-        0.0, 0.0, 0.0, T;
+    G << (T * T) / 2.0,      0.0,               0.0,          0.0,
+               T,            0.0,               0.0,          0.0,
+              0.0,      (T * T) / 2.0,          0.0,          0.0,
+              0.0,            T,                0.0,          0.0,
+              0.0,           0.0,          (T * T) / 2.0,     0.0,
+              0.0,           0.0,                T,           0.0,
+              0.0,           0.0,               0.0,          1.0;
 
     M Qp = G * Q * G.transpose();
     return Qp;
@@ -244,7 +244,7 @@ bool Utils<M>::CheckingConditionsMat(const M &P)
         return false;
 }
 template <class M>
-M Utils<M>::CholeskyLowerTriangularTransposition(const M& P)
+M Utils<M>::sqrtMat(const M& P)
 {
      Eigen::LLT<M>lltofP(P);
     if (lltofP.info() != Eigen::Success)
