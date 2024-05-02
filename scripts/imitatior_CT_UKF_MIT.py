@@ -166,6 +166,8 @@ plt.legend()
 def fx(x, dt):
 
     w = x[6]
+    if w == 0.0:
+        w= 0.0000001
     F = np.array([[1.0,  1/w*np.sin(w*dt),     0.0,      -1/w*(1-np.cos(w*dt)),  0.0,    0.0,     0.0],
              [0.0,  np.cos(w*dt),         0.0,      -np.sin(w*dt),          0.0,    0.0,     0.0],
              [0.0,  1/w*(1-np.cos(w*dt)), 1.0,      1/w*np.sin(w*dt),       0.0,    0.0,     0.0],
@@ -188,10 +190,11 @@ points = MerweScaledSigmaPoints(7, alpha=.1, beta=2., kappa=-1)
 
 Z_cart = Zsph2cart(Z)
 
-w1 = 0.00000001
+w1 = 0.0000000
 kf = UnscentedKalmanFilter(dim_x=7, dim_z=3, dt=dt, fx=fx,hx=hx, points=points)
 kf.x = np.array(([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.,w1]))
-kf.P *= 100
+
+kf.P = 100.0*(np.pi/180.0)
 z_std = 0.1 *(np.pi/180.0)
 kf.R = R
 kf.Q = Q#_discrete_white_noise(dim=4, dt=dt, var=0.5**2, block_size=3)
@@ -236,14 +239,16 @@ plt.legend()
 # # ================= Блок 5 ===================
 # # СБОР СТАТИСТИКИ
 
-def calc_err(X,w):
+def calc_err(X):
 
     Xn = add_process_noise(X, Q)
     X_pass, pass_id = make_pass(Xn,pd)
     Zn = do_measurement(X_pass, R, pass_id)
-    X_c = estimate(Zn,w)
+    X_c = estimate(Zn)
 
-    err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
+    print("x_c",X_c)
+    print("x_n",Xn)
+    err = X_c[:,:] - Xn [:,:].T # ошибка вычисляется со второго столбца.
 
     # print("ошибка в статистике calc_err",err[0])
 
@@ -251,12 +256,12 @@ def calc_err(X,w):
 
 from tqdm import tqdm
 
-def calc_std_err(X,w):
-    num_iterations = 2000
-    var_err = np.zeros((X.shape[0], X.shape[1]-1))
+def calc_std_err(X):
+    num_iterations = 2
+    var_err = np.zeros((X.shape[0], X.shape[1])).T
 
     for i in tqdm(range(num_iterations)):
-        err = calc_err(X,w)
+        err = calc_err(X)
         var_err += err ** 2
 
     var_err /= num_iterations
@@ -266,8 +271,8 @@ def calc_std_err(X,w):
 # tg2G.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.098})
 # n=125
 # X_true_data_not_pass_2G = make_true(tg2G,n)
-# w = 0.098
-# std_err_2G = calc_std_err(X_true_data_not_pass_2G,w)
+# w = 0.00000001
+# std_err_2G = calc_std_err(X_true_data_not_pass_2G)
 
 # tg5G = Target()
 # tg5G.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.245})
@@ -315,6 +320,11 @@ def calc_std_err(X,w):
 # plt.grid(True)
 # plt.xlabel('Time,s')
 # plt.ylabel('std_vz, m/s')
+# plt.subplot(7, 1, 7)
+# plt.plot((np.arange(len(std_err_2G[6, :]))+1)*dt, std_err_2G[6, :])
+# plt.xlabel('Time,s')
+# plt.ylabel('std_w, rad')
+# plt.grid(True)
 # plt.subplots_adjust(wspace=12.0, hspace=1.0)
 
 

@@ -205,7 +205,7 @@ def calc_err(X,w):
 
     err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
 
-    # print("ошибка в статистике calc_err",err[0])
+    print("ошибка в статистике calc_err",err[6])
 
     return err
 
@@ -276,7 +276,7 @@ plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vz, m/s')
 plt.subplot(7, 1, 7)
-plt.plot((np.arange(len(std_err_2G[0, :]))+1)*dt, std_err_2G[0, :])
+plt.plot((np.arange(len(std_err_2G[6, :]))+1)*dt, std_err_2G[6, :])
 plt.xlabel('Time,s')
 plt.ylabel('std_w, rad')
 plt.grid(True)
