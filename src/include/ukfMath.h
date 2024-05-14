@@ -8,7 +8,7 @@ template <class M>
 struct UnscentedKalmanFilterMath
 {
 
-    UnscentedKalmanFilterMath(const M &measNoiseMatRadian, const M &procNoise, Points &p);
+    UnscentedKalmanFilterMath(const M &measNoiseMat, const M &procNoise, Points &p);
     M make_P_cart(const M& P, const M& X);
     M doSigmaVectors(const M& X, const M& P);
     M doExtrapolatedStateVector(const M &Xue);
@@ -22,7 +22,7 @@ struct UnscentedKalmanFilterMath
 
     private:
 
-    M R_sph_rad;
+    M R_sph_deg;
     M Q;
     size_t n;
     Points points;
@@ -31,11 +31,11 @@ struct UnscentedKalmanFilterMath
 };
 
 template <class M>
-UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &measNoiseMatRadian, const M &procNoise, Points &p)
+UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &measNoiseMat, const M &procNoise, Points &p)
 {   
     SigmaPoints<M> sigmaPoints;
-    R_sph_rad = measNoiseMatRadian;
-    Q = procNoise;
+    R_sph_deg = measNoiseMat;
+    Q = procNoise; 
     points = p;
 }
 
@@ -44,14 +44,13 @@ M UnscentedKalmanFilterMath<M>::make_P_cart(const M& P, const M& X)
 {   
     if (P.isZero())
     {
-        M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
+        // M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
         Measurement measZ0 = Utils<M>::make_Z0(X);
         int numOfParameters = X.rows();
         M P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
-        PRINTM(P0);
+        // PRINTM(P0);
         return P0;
     }
-    PRINTM(P);
     return P;
 }
 
@@ -76,7 +75,7 @@ M UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(const M &Xue)
         // PRINTM(sigmaPoints.Wm[i]);
         Xe = Xe + sigmaPoints.Wm[i] * Xue.col(i);
     }
-    PRINTM(Xe);
+    // PRINTM(Xe);
     return Xe;
     
 }
@@ -94,7 +93,7 @@ M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, co
     }
 
     Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
-    PRINTM(Pe);
+    // PRINTM(Pe);
     
     return Pe;
 }
@@ -109,7 +108,7 @@ M UnscentedKalmanFilterMath<M>::doExtrapolatedMeasVector(const M &Zue)
     {
         Ze = Ze + sigmaPoints.Wm[i] * Zue.col(i);
     }
-    PRINTM(Ze);
+    // PRINTM(Ze);
     return Ze;
 }
 
@@ -124,8 +123,8 @@ M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedMeasVector(const M &Zue, con
         v = Zue.col(i) - Ze;
         Pzz = Pzz + sigmaPoints.Wc[i] * (v * v.transpose());
     }
-    M Se = Pzz + R_sph_rad;
-    PRINTM(Se);
+    M Se = Pzz + R_sph_deg;
+    // PRINTM(Se);
     return Se;
 }
 
@@ -138,7 +137,7 @@ M UnscentedKalmanFilterMath<M>::calcGainFilter(const M &Xue, const M &Xe, const 
 
     for (int i = 0; i < Zue.cols(); i++)
     {
-        PRINTM(sigmaPoints.Wc[i]);
+        // PRINTM(sigmaPoints.Wc[i]);
         M dX = Xue.col(i) - Xe;
         // PRINTM(dX);
         M v = Zue.col(i) - Ze;
@@ -146,9 +145,9 @@ M UnscentedKalmanFilterMath<M>::calcGainFilter(const M &Xue, const M &Xe, const 
         Pxz = Pxz + sigmaPoints.Wc[i] * dX * v.transpose();
        
     }
-    PRINTM(Pxz);
+    // PRINTM(Pxz);
     M gainKalman = Pxz * Se.inverse();
-    PRINTM(gainKalman);
+    // PRINTM(gainKalman);
     return gainKalman;
 }
 
@@ -157,7 +156,7 @@ M UnscentedKalmanFilterMath<M>::correctState(const M &Xe, const M &Z, const M &Z
 
 {
     M X = Xe + K * (Z - Ze);
-    PRINTM(X);
+    // PRINTM(X);
     return X;
 }
 
@@ -165,7 +164,7 @@ template <class M>
 M UnscentedKalmanFilterMath<M>::correctCov(const M &Pe, const M &K, const M &Se)
 {
     M P = Pe - K * Se * K.transpose();
-    PRINTM(P);
+    // PRINTM(P);
     if (Utils<M>::CheckingConditionsMat(P)) // проверка на симметричность, положительно определённость и не вырожденность
         return P;
     else

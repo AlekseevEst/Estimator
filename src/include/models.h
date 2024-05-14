@@ -36,12 +36,13 @@ struct FuncConstTurn
         M F(ENUM_TO_INT(SizeMat::ROW7),ENUM_TO_INT(SizeMat::COL7));
 
         M Xue(Xu.rows(),Xu.cols());
-        double w = Xu.col(ENUM_TO_INT(SizeMat::COL0))(ENUM_TO_INT(CoordPositionMat::W));
-        if (w == 0)
-            w = 1e-9;
+        
         for (int i = 0; i < Xu.cols(); i++)
         {
 
+            double w = Xu.col(i)(ENUM_TO_INT(CoordPositionMat::W)) * (M_PI/180.0);
+            if (w == 0)
+                w = 1e-9;
             F <<1.0,  sin(w*T)/w,       0.0,   -(1-cos(w*T))/w,    0.0,    0.0,   0.0,
                 0.0,  cos(w*T),         0.0,    -sin(w*T),         0.0,    0.0,   0.0,
                 0.0,  (1-cos(w*T))/w,   1.0,    sin(w*T)/w,        0.0,    0.0,   0.0,
@@ -50,10 +51,10 @@ struct FuncConstTurn
                 0.0,  0.0,              0.0,    0.0,               0.0,    1.0,   0.0,
                 0.0,  0.0,              0.0,    0.0,               0.0,    0.0,   1.0;
 
-            
+        
             Xue.col(i) = F * Xu.col(i); 
         }
-        PRINTM(Xue);
+        // PRINTM(Xue);
         return Xue;
     }
 
@@ -79,8 +80,8 @@ struct FuncMeasSph
             M zTmp(Z.rows(), 1);
 
                 double range = sqrt(pow(Xue.col(i)(ENUM_TO_INT(xPos)), 2) + pow(Xue.col(i)(ENUM_TO_INT(yPos)), 2) + pow(Xue.col(i)(ENUM_TO_INT(zPos)), 2));
-                double az = atan2(Xue.col(i)(ENUM_TO_INT(yPos)), Xue.col(i)(ENUM_TO_INT(xPos)));
-                double el = atan2(Xue.col(i)(ENUM_TO_INT(zPos)), sqrt(pow(Xue.col(i)(ENUM_TO_INT(xPos)), 2) + pow(Xue.col(i)(ENUM_TO_INT(yPos)), 2)));
+                double az = atan2(Xue.col(i)(ENUM_TO_INT(yPos)), Xue.col(i)(ENUM_TO_INT(xPos))) * (180.0/M_PI);
+                double el = atan2(Xue.col(i)(ENUM_TO_INT(zPos)), sqrt(pow(Xue.col(i)(ENUM_TO_INT(xPos)), 2) + pow(Xue.col(i)(ENUM_TO_INT(yPos)), 2))) * (180.0/M_PI);
 
             if (Z.rows() == ENUM_TO_INT(SizeMat::ROW3))
             {
@@ -97,9 +98,9 @@ struct FuncMeasSph
             }
             Zue.col(i) = zTmp; 
 
-            Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)), Z(ENUM_TO_INT(azPos)));
+           // Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)), Z(ENUM_TO_INT(azPos)));
         }
-        PRINTM(Zue);
+        // PRINTM(Zue); 
         return Zue;
     }
 };
