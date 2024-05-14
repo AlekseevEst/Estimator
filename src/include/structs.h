@@ -23,3 +23,9 @@ struct Measurement
     double az_meas;
     double um_meas;
 };
+struct Points
+{
+    double alpha;
+    double beta;
+    double kappa;
+};

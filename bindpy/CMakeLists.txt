@@ -4,7 +4,8 @@ pybind11_add_module(${PROJECT_NAME}
     MODULE
         bind_ukf.cpp
         # bind_ekf.cpp
-        bind_track.cpp
+        bind_track_CV.cpp
+        bind_track_CT.cpp
         bindings.cpp
         )
 

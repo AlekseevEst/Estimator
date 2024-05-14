@@ -5,7 +5,7 @@ template <class M, class TypeEstimator/*, class TypeDetection*/>
 struct Track
 {
 
-    Track(const M &X, double t, const M &procNoise, const M &measNoiseMatRadian, double koef) : estimator(X, t, procNoise, measNoiseMatRadian, koef) {}
+    Track(const M &X, double t, const M &procNoise, const M &measNoiseMatRadian, Points points) : estimator(X, t, procNoise, measNoiseMatRadian, points) {}
 
     M Step(const M &meas)
     {
