@@ -61,12 +61,45 @@ struct FuncConstTurn
 };
 
 template <class M>
+struct FuncConstAcceleration
+{
+
+    M operator()(M &Xu, double T)
+    {
+        M F(ENUM_TO_INT(SizeMat::ROW9),ENUM_TO_INT(SizeMat::COL9));
+
+        M Xue(Xu.rows(),Xu.cols());
+        
+        for (int i = 0; i < Xu.cols(); i++)
+        {
+
+            F <<1.0,   T,  (T * T) / 2.0,   0.0,    0.0,     0.0,      0.0,     0.0,       0.0,
+                0.0,  1.0,        T,        0.0,    0.0,     0.0,      0.0,     0.0,       0.0,
+                0.0,  0.0,       1.0,       0.0,    0.0,     0.0,      0.0,     0.0,       0.0,
+                0.0,  0.0,       0.0,       1.0,     T, (T * T) / 2.0, 0.0,     0.0,       0.0,
+                0.0,  0.0,       0.0,       0.0,    1.0,      T,       0.0,     0.0,       0.0,
+                0.0,  0.0,       0.0,       0.0,    0.0,     1.0,      0.0,     0.0,       0.0,
+                0.0,  0.0,       0.0,       0.0,    0.0,     0.0,      1.0,      T,    (T * T) / 2.0,
+                0.0,  0.0,       0.0,       0.0,    0.0,     0.0,      0.0,     1.0,        T,
+                0.0,  0.0,       0.0,       0.0,    0.0,     0.0,      0.0,     0.0,       1.0;
+
+        
+            Xue.col(i) = F * Xu.col(i); 
+        }
+        // PRINTM(Xue);
+        return Xue;
+    }
+
+};
+
+template <class M>
 struct FuncMeasSph
 { 
 
     M operator()(const M &Xue, const M &Z)
     {   
-        MeasPositionMat azPos = MeasPositionMat::AZ;
+
+        // MeasPositionMat azPos = MeasPositionMat::AZ;
         CoordPositionMat xPos = CoordPositionMat::X;
         CoordPositionMat yPos = CoordPositionMat::Y;
         CoordPositionMat zPos = CoordPositionMat::Z;
@@ -74,6 +107,15 @@ struct FuncMeasSph
         CoordPositionMat vyPos = CoordPositionMat::VY;
         CoordPositionMat vzPos = CoordPositionMat::VZ;
         
+        if (Xue.rows() == ENUM_TO_INT(SizeMat::ROW9))
+        {
+            xPos = CoordPositionMat::X_CA;
+            yPos = CoordPositionMat::Y_CA;
+            zPos = CoordPositionMat::Z_CA;
+            vxPos = CoordPositionMat::VX_CA;
+            vyPos = CoordPositionMat::VY_CA;
+            vzPos = CoordPositionMat::VZ_CA;
+        } 
         M Zue(Z.rows(),Xue.cols());
         for (int i = 0; i < Xue.cols(); i++)
         {

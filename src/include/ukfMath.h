@@ -48,9 +48,10 @@ M UnscentedKalmanFilterMath<M>::make_P_cart(const M& P, const M& X)
         Measurement measZ0 = Utils<M>::make_Z0(X);
         int numOfParameters = X.rows();
         M P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
-        // PRINTM(P0);
+        PRINTM(P0);
         return P0;
     }
+    // PRINTM(P);
     return P;
 }
 
@@ -90,9 +91,10 @@ M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, co
     {
         M dX = Xue.col(i) - Xe;
         Pe = Pe + sigmaPoints.Wc[i] * (dX * dX.transpose());
-    }
 
-    Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
+    }
+    
+    Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t, Xe.rows());
     // PRINTM(Pe);
     
     return Pe;

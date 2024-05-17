@@ -265,7 +265,7 @@ tg8G = Target()
 tg8G.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':22.46})
 n=31
 X_true_data_not_pass_8G = make_true(tg8G,n)
-w = 0.392
+w = 0.0
 std_err_8G = calc_std_err(X_true_data_not_pass_8G,w)
 
 
