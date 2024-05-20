@@ -24,7 +24,7 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-tg1.init_state({'x':120000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0})
+tg1.init_state({'x':20000.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0})
 # tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0})
 
 def remove_zero_columns(arr):
