@@ -191,7 +191,7 @@ def estimate (Z):
     point.alpha = 1e-3
     point.beta = 2
     point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CA(X0,dt,Qp,R,point) #инициал. фильтра
+    ukf = estimator.BindTrackUkf_CA(X0,Qp,R,point) #инициал. фильтра
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
         if np.all(Z[:,i+1] == 0):
@@ -199,7 +199,7 @@ def estimate (Z):
             X_c = np.append(X_c,X,axis=1)
             continue
         # print('Z=',Z[:,i+1])
-        X = ukf.step(Z[:,i+1])
+        X = ukf.step(dt, Z[:,i+1])
         # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
     print("X_Estimeted=",X_c)

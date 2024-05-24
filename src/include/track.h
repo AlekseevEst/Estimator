@@ -5,13 +5,13 @@ template <class M, class TypeEstimator/*, class TypeDetection*/>
 struct Track
 {
 
-    Track(const M &X, double t, const M &procNoise, const M &measNoiseMatRadian, Points points) : estimator(X, t, procNoise, measNoiseMatRadian, points) {}
+    Track(const M &X, const M &procNoise, const M &measNoiseMatRadian, Points points) : estimator(X, procNoise, measNoiseMatRadian, points) {}
 
-    M Step(const M &meas)
+    M Step(double dt, const M &meas)
     {
         try
         {
-            M xe = estimator.predict();
+            M xe = estimator.predict(dt);
             M x = estimator.correct(meas);
 
             return x;
@@ -23,12 +23,12 @@ struct Track
         }
     }
 
-    M Step()
+    M Step(double dt)
     {
 
         try
         {
-            estimator.correctStruct.X = estimator.predict();
+            estimator.correctStruct.X = estimator.predict(dt);
             estimator.correctStruct.P = estimator.predictStruct.Pe;
             return estimator.correctStruct.X;
         }

@@ -10,21 +10,21 @@ import random
 import estimator
 from models import Target
 
+# dt = 0.25
 dt = 1.0
 pd = 1.0
 
 R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
-
-   
-
+  
 # =============== Блок 1 ===================
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
 
-tg1.init_state({'x':10000.0, 'y':0.0, 'z':20000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': -49.0})
+# tg1.init_state({'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4}) #for dt = 0.25, n = 50
+tg1.init_state({'x':40000.0, 'y':0.0, 'z':0.0, 'vx':-1000.0, 'vy':0.0, 'vz':0.0, 'ax': 30.0, 'ay': 0.0, 'az': 0.0})
 
 def remove_zero_columns(arr):
 
@@ -68,8 +68,8 @@ def make_true (tg1,n):
     # plt.show()
     return (X_true_data_not_pass)
 
-n = 18 #for dt = 1
-# n = 90 #for dt = 0.25
+n = 26
+# n = 50 # for dt = 0.25
 X_true_data_not_pass = make_true(tg1,n)
 
 # print("x_true",X_true_data_not_pass)
@@ -90,8 +90,8 @@ with_pass = remove_zero_columns(X_true_data_with_pass)
 
 # # ================= Блок 2 =================
 # # создание истинной зашумленной траектории
-process_var = 10
-Qp = np.diag([process_var, process_var, 10]) 
+process_var = 0.0000000000001
+Qp = np.diag([process_var, process_var, process_var]) 
 G = np.array([[dt**2/2,  0.0,          0.0],
              [dt,        0.0,          0.0],
              [1.0,       0.0,          0.0],
@@ -103,7 +103,6 @@ G = np.array([[dt**2/2,  0.0,          0.0],
              [0.0,       0.0,      1.0    ]])
 
 Q = G@Qp@G.T
-
 def add_process_noise(X, Var):
     X_true_plus_ProcNoise = X + np.sqrt(Var) @ np.random.normal(loc=0, scale=1.0, size=(X.shape[0], X.shape[1]))
     return X_true_plus_ProcNoise
@@ -205,6 +204,7 @@ def estimate (Z):
     return X_c 
 
 X_c = estimate(Z)
+# print("X_Estimeted=",X_c)
 
 # def err1(X_c,X_true_plus_ProcNoise):
 
@@ -254,72 +254,66 @@ def calc_std_err(X):
     return np.sqrt(var_err)
 
 
-tg5G = Target()
-tg5G.init_state({'x':10000.0, 'y':20000.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': -49.0})
-n=18
-X_true_data_not_pass_5G = make_true(tg5G,n)
-std_err_5G = calc_std_err(X_true_data_not_pass_5G)
+tg3G = Target()
+tg3G.init_state({'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4})
 
-# # tg3G = Target()
-# # tg3G.init_state({'x':10000.0, 'y':20000.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': .0, 'ay': 0.0, 'az': 29.4})
-# # n=50
-# # X_true_data_not_pass_3G = make_true(tg3G,n)
-# # w = 0.0
-# # std_err_3G = calc_std_err(X_true_data_not_pass_3G, w)
+n=18 # for dt = 1
+# n=50 # for dt = 0.25
+X_true_data_not_pass_3G = make_true(tg3G,n)
+std_err_3G = calc_std_err(X_true_data_not_pass_3G)
 
 
 
-
-plt.figure(num="5G")
+plt.figure(num="3G")
 plt.subplot(9, 1, 1)
-plt.plot((np.arange(len(std_err_5G[0, :])))*dt, std_err_5G[0, :])
+plt.plot((np.arange(len(std_err_3G[0, :])))*dt, std_err_3G[0, :])
 plt.xlabel('Time,s')
 plt.ylabel('std_x, met')
 plt.grid(True)
 plt.subplot(9, 1, 2)
-plt.plot((np.arange(len(std_err_5G[1, :])))*dt, std_err_5G[1,:])
+plt.plot((np.arange(len(std_err_3G[1, :])))*dt, std_err_3G[1,:])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vx, m/s')
 
 plt.subplot(9, 1, 3)
-plt.plot((np.arange(len(std_err_5G[2, :])))*dt, std_err_5G[2, :])
+plt.plot((np.arange(len(std_err_3G[2, :])))*dt, std_err_3G[2, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_ax, m/s^2')
 
 plt.subplot(9, 1, 4)
-plt.plot((np.arange(len(std_err_5G[3, :])))*dt, std_err_5G[3, :])
+plt.plot((np.arange(len(std_err_3G[3, :])))*dt, std_err_3G[3, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_y, met')
 
 plt.subplot(9, 1, 5)
-plt.plot((np.arange(len(std_err_5G[4,:])))*dt, std_err_5G[4, :])
+plt.plot((np.arange(len(std_err_3G[4,:])))*dt, std_err_3G[4, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vy, m/s')
 
 plt.subplot(9, 1, 6)
-plt.plot((np.arange(len(std_err_5G[5, :])))*dt, std_err_5G[5, :])
+plt.plot((np.arange(len(std_err_3G[5, :])))*dt, std_err_3G[5, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_ay, m/s^2')
 
 plt.subplot(9, 1, 7)
-plt.plot((np.arange(len(std_err_5G[6, :])))*dt, std_err_5G[6, :])
+plt.plot((np.arange(len(std_err_3G[6, :])))*dt, std_err_3G[6, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_z, m')
 
 plt.subplot(9, 1, 8)
-plt.plot((np.arange(len(std_err_5G[7, :])))*dt, std_err_5G[7, :])
+plt.plot((np.arange(len(std_err_3G[7, :])))*dt, std_err_3G[7, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vx, m/s')
 
 plt.subplot(9, 1, 9)
-plt.plot((np.arange(len(std_err_5G[8, :])))*dt, std_err_5G[8, :])
+plt.plot((np.arange(len(std_err_3G[8, :])))*dt, std_err_3G[8, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_az, m/s^2')

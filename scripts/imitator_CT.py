@@ -154,7 +154,7 @@ def do_measurement(X_plusProcNoise,R, pass_index):
 Z = do_measurement (X_true_plus_ProcNoise_with_pass, R, pass_index)
 # #==================Отрисовка==================
 Z_not_pass = Z
-print('Z=', Z)
+# print('Z=', Z)
 dictData = {}
 dictData['DeltaTime'] = dt
 dictData['Measurement'] = Z.tolist()
@@ -179,26 +179,25 @@ def estimate (Z,w):
     
     Z_cart = Zsph2cart(Z)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.,w]) # инициализируем вектор состояния, равный первому измерению
-    print('X0=',X0)
+    # print('X0=',X0)
     point = estimator.Points()
     point.alpha = 1e-3
     point.beta = 2
     point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CT(X0,dt,Qp,R,point) #инициал. фильтра
+    ukf = estimator.BindTrackUkf_CT(X0,Qp,R,point) #инициал. фильтра
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
         if np.all(Z[:,i+1] == 0):
             X = ukf.step(dt)
             X_c = np.append(X_c,X,axis=1)
             continue
-        print('Z=',Z[:,i+1])
-        X = ukf.step(Z[:,i+1])
-        print('X=',X)
+        X = ukf.step(dt, Z[:,i+1])
+        # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
     return X_c 
 w = 0.0
 X_c = estimate(Z,w)
-print(X_c)
+# print(X_c)
 
 # def err1(X_c,X_true_plus_ProcNoise):
 

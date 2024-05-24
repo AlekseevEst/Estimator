@@ -145,7 +145,6 @@ M UnscentedKalmanFilterMath<M>::calcGainFilter(const M &Xue, const M &Xe, const 
         M v = Zue.col(i) - Ze;
         // PRINTM(v);
         Pxz = Pxz + sigmaPoints.Wc[i] * dX * v.transpose();
-       
     }
     // PRINTM(Pxz);
     M gainKalman = Pxz * Se.inverse();

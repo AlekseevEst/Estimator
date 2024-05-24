@@ -281,8 +281,8 @@ template <class M>
 double Utils<M>::ComputeAngleDifference(double angle1, double angle2)
 {
 
-    double diff = std::arg(std::complex<double>(cos(angle1 - angle2)*(M_PI/180.0), sin((angle1 - angle2)*(M_PI/180.0))));
-    return diff * (180.0/M_PI);
+    double diff = std::arg(std::complex<double>(cos(angle1 - angle2), sin((angle1 - angle2))));
+    return diff;
 }
 
 template <class M>

@@ -24,7 +24,7 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-tg1.init_state({'x':20000.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0})
+tg1.init_state({'x':50000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0})
 # tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0})
 
 def remove_zero_columns(arr):
@@ -78,7 +78,7 @@ with_pass = remove_zero_columns(X_true_data_with_pass)
 
 # ================= Блок 2 =================
 # создание истинной зашумленной траектории
-process_var = 0.001
+process_var = 0.0001
 Qp = np.diag([process_var, process_var, process_var])
 G = np.array([[dt**2/2,  0.0,         0.0],
              [dt,       0.0,          0.0],
@@ -155,15 +155,15 @@ def estimate (Z):
     point.beta = 2
     point.kappa = 3 - X0.shape[0]
 
-    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_without_vr,point) #инициал. фильтра
+    ukf = estimator.BindTrackUkf_CV(X0,Qp,R_without_vr,point) #инициал. фильтра
     
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
         if np.all(Z[:,i+1] == 0):
-            X = ukf.step()
+            X = ukf.step(dt)
             X_c = np.append(X_c,X,axis=1)
             continue
-        X = ukf.step(Z[:,i+1])
+        X = ukf.step(dt, Z[:,i+1])
         X_c = np.append(X_c,X,axis=1)
     return X_c 
 
@@ -176,15 +176,15 @@ def estimate_with_vr (Zvr):
     point.alpha = 1e-3
     point.beta = 2
     point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_with_vr,point) #инициал. фильтра
+    ukf = estimator.BindTrackUkf_CV(X0,Qp,R_with_vr,point) #инициал. фильтра
     
     X_c = np.empty((len(X0), 0))
     for i in range (Zvr.shape[1]-1):
         if np.all(Zvr[:,i+1] == 0):
-            X = ukf.step()
+            X = ukf.step(dt)
             X_c = np.append(X_c,X,axis=1)
             continue
-        X = ukf.step(Zvr[:,i+1])
+        X = ukf.step(dt, Zvr[:,i+1])
         X_c = np.append(X_c,X,axis=1)
     return X_c 
 
