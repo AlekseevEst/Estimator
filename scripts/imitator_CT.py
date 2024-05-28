@@ -24,14 +24,13 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-# tg1.init_state({'x':1000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0}) #ошибка +pi-pi 
-# tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.0})
 
-tg1.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':5.614986})
+init_state2G = {'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':5.614986}
+init_state5G = {'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':14.04}
+init_state8G = {'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':22.46}
 
-# tg1.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':14.04})
-
-# tg1.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':22.46})
+tg1.init_state(init_state2G)
+n = 125
 
 def remove_zero_columns(arr):
 
@@ -69,9 +68,8 @@ def make_true (tg1,n):
     # plt.plot(x1,y1,'b')
     # plt.grid(True)
     return (X_true_data_not_pass)
-# n = 7
-# n = 50
-n = 125
+
+
 X_true_data_not_pass = make_true(tg1,n)
 
 X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
@@ -247,21 +245,21 @@ def calc_std_err(X,w):
     return np.sqrt(var_err)
 
 tg2G = Target()
-tg2G.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':5.614986})
+tg2G.init_state(init_state2G)
 n=125
 X_true_data_not_pass_2G = make_true(tg2G,n)
 w = 0.0
 std_err_2G = calc_std_err(X_true_data_not_pass_2G,w)
 
 tg5G = Target()
-tg5G.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':14.04})
+tg5G.init_state(init_state5G)
 n=50
 X_true_data_not_pass_5G = make_true(tg5G,n)
 w = 0.0
 std_err_5G = calc_std_err(X_true_data_not_pass_5G, w)
 
 tg8G = Target()
-tg8G.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':22.46})
+tg8G.init_state(init_state8G)
 n=31
 X_true_data_not_pass_8G = make_true(tg8G,n)
 w = 0.0

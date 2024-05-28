@@ -24,9 +24,10 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
+init_state = {'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4}
 
-# tg1.init_state({'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4}) #for dt = 0.25, n = 50
-tg1.init_state({'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4})
+tg1.init_state(init_state)
+n = 18
 
 def remove_zero_columns(arr):
 
@@ -70,7 +71,7 @@ def make_true (tg1,n):
     # plt.show()
     return (X_true_data_not_pass)
 
-n = 18
+
 # n = 50 # for dt = 0.25
 X_true_data_not_pass = make_true(tg1,n)
 
@@ -202,7 +203,7 @@ def estimate (Z):
         X = ukf.step(dt, Z[:,i+1])
         # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
-    print("X_Estimeted=",X_c)
+    # print("X_Estimeted=",X_c)
     return X_c 
 
 X_c = estimate(Z)
@@ -245,7 +246,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 1
+    num_iterations = 100
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
@@ -257,7 +258,7 @@ def calc_std_err(X):
 
 
 tg3G = Target()
-tg3G.init_state({'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4})
+tg3G.init_state(init_state)
 
 n=18 # for dt = 1
 # n=50 # for dt = 0.25

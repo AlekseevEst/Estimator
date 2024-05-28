@@ -304,3 +304,4 @@ M Utils<M>::sqrtMat(const M& P)
     M L = lltofP.matrixL();
     return L;
 }
+

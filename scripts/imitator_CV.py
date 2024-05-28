@@ -24,8 +24,9 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-tg1.init_state({'x':50000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0})
-# tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0})
+init_state = {'x':130000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0}
+
+tg1.init_state(init_state)
 
 def remove_zero_columns(arr):
 
@@ -45,7 +46,7 @@ def make_pass(X_true_data, pd):
 
 
 def make_true (tg1): 
-    n = 90 # количество измерении
+    n = 100 # количество измерении
 
     x1=[];y1=[];z1=[]; vx1=[];vy1=[];vz1=[]; w=[]  
     for i in range(n):
@@ -78,7 +79,7 @@ with_pass = remove_zero_columns(X_true_data_with_pass)
 
 # ================= Блок 2 =================
 # создание истинной зашумленной траектории
-process_var = 0.0001
+process_var = 0.00001
 Qp = np.diag([process_var, process_var, process_var])
 G = np.array([[dt**2/2,  0.0,         0.0],
              [dt,       0.0,          0.0],

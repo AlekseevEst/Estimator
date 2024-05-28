@@ -132,8 +132,9 @@ struct FuncMeasSphCVCT
                 zTmp << range, az, el, vr;
             }
             Zue.col(i) = zTmp; 
+        
+            Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)) * (M_PI/180.0), Z(ENUM_TO_INT(azPos)) * (M_PI/180.0)) * (180.0/M_PI);
 
-           Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)) * (M_PI/180.0), Z(ENUM_TO_INT(azPos)) * (M_PI/180.0)) * (180.0/M_PI);
         }
         // PRINTM(Zue); 
         return Zue;
@@ -143,7 +144,6 @@ struct FuncMeasSphCVCT
 template <class M>
 struct FuncMeasSphCA
 { 
-
     M operator()(const M &Xue, const M &Z)
     {   
         MeasPositionMat azPos = MeasPositionMat::AZ;
@@ -178,7 +178,8 @@ struct FuncMeasSphCA
             }
             Zue.col(i) = zTmp; 
 
-           Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)) * (M_PI/180.0), Z(ENUM_TO_INT(azPos)) * (M_PI/180.0)) * (180.0/M_PI);
+            Zue.col(i)(ENUM_TO_INT(azPos)) =  Z(ENUM_TO_INT(azPos)) + Utils<M>::ComputeAngleDifference(Zue.col(i)(ENUM_TO_INT(azPos)) * (M_PI/180.0), Z(ENUM_TO_INT(azPos)) * (M_PI/180.0)) * (180.0/M_PI);
+            
         }
         // PRINTM(Zue); 
         return Zue;

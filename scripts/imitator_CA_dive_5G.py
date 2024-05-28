@@ -23,8 +23,10 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
+init_state = {'x':10000.0, 'y':0.0, 'z':20000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': -49.0} 
+tg1.init_state(init_state)
 
-tg1.init_state({'x':10000.0, 'y':0.0, 'z':20000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': -49.0})
+n = 18
 
 def remove_zero_columns(arr):
 
@@ -63,13 +65,9 @@ def make_true (tg1,n):
         
 
     X_true_data_not_pass = np.array([x1,vx1,ax1,y1,vy1,ay1,z1,vz1,az1])             
-    # plt.plot(x1,y1,'b')
-    # plt.grid(True)
-    # plt.show()
+
     return (X_true_data_not_pass)
 
-n = 18 #for dt = 1
-# n = 90 #for dt = 0.25
 X_true_data_not_pass = make_true(tg1,n)
 
 # print("x_true",X_true_data_not_pass)
@@ -201,7 +199,7 @@ def estimate (Z):
         X = ukf.step(dt, Z[:,i+1])
         # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
-    print("X_Estimeted=",X_c)
+    # print("X_Estimeted=",X_c)
     return X_c 
 
 X_c = estimate(Z)
@@ -216,13 +214,11 @@ X_c = estimate(Z)
 
 
 # #==================Отрисовка==================
-# Z_cart = Zsph2cart(Z)
 plt.figure()
 plt.plot(X_c[0], X_c[6], label='Correct', marker='o')
 plt.plot(X_true_plus_ProcNoise[0],X_true_plus_ProcNoise[6], label='truth', marker='x')
 plt.plot(Zc[0], Zc[2], label='Meas',marker='o')
 plt.legend()
-
 
 # # # ================= Блок 5 ===================
 # # СБОР СТАТИСТИКИ
@@ -243,7 +239,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 1
+    num_iterations = 100
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
@@ -255,19 +251,9 @@ def calc_std_err(X):
 
 
 tg5G = Target()
-tg5G.init_state({'x':10000.0, 'y':20000.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': -49.0})
-n=18
+tg5G.init_state(init_state)
 X_true_data_not_pass_5G = make_true(tg5G,n)
 std_err_5G = calc_std_err(X_true_data_not_pass_5G)
-
-# # tg3G = Target()
-# # tg3G.init_state({'x':10000.0, 'y':20000.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': .0, 'ay': 0.0, 'az': 29.4})
-# # n=50
-# # X_true_data_not_pass_3G = make_true(tg3G,n)
-# # w = 0.0
-# # std_err_3G = calc_std_err(X_true_data_not_pass_3G, w)
-
-
 
 
 plt.figure(num="5G")

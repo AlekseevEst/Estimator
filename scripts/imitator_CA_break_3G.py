@@ -10,21 +10,22 @@ import random
 import estimator
 from models import Target
 
-# dt = 0.25
 dt = 1.0
 pd = 1.0
 
 R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg
+
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
-  
+
 # =============== Блок 1 ===================
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
+init_state = {'x':50000.0, 'y':0.0, 'z':0.0, 'vx':-1000.0, 'vy':0.0, 'vz':0.0, 'ax': 30.0, 'ay': 0.0, 'az': 0.0}
 
-# tg1.init_state({'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4}) #for dt = 0.25, n = 50
-tg1.init_state({'x':40000.0, 'y':0.0, 'z':0.0, 'vx':-1000.0, 'vy':0.0, 'vz':0.0, 'ax': 30.0, 'ay': 0.0, 'az': 0.0})
+tg1.init_state(init_state)
+n = 18
 
 def remove_zero_columns(arr):
 
@@ -63,13 +64,11 @@ def make_true (tg1,n):
         
 
     X_true_data_not_pass = np.array([x1,vx1,ax1,y1,vy1,ay1,z1,vz1,az1])             
-    # plt.plot(x1,y1,'b')
-    # plt.grid(True)
-    # plt.show()
+
     return (X_true_data_not_pass)
 
-n = 26
-# n = 50 # for dt = 0.25
+
+
 X_true_data_not_pass = make_true(tg1,n)
 
 # print("x_true",X_true_data_not_pass)
@@ -83,14 +82,14 @@ with_pass = remove_zero_columns(X_true_data_with_pass)
 # scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[3], z=with_pass[6], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
 # fig2.add_trace(scatter2)
 
-# # Обновляем параметры макета
+# # # Обновляем параметры макета
 # fig2.update_layout(scene=dict(aspectmode="cube"))
 # fig2.show()
 
 
 # # ================= Блок 2 =================
 # # создание истинной зашумленной траектории
-process_var = 0.0000000000001
+process_var = 10.0
 Qp = np.diag([process_var, process_var, process_var]) 
 G = np.array([[dt**2/2,  0.0,          0.0],
              [dt,        0.0,          0.0],
@@ -200,7 +199,7 @@ def estimate (Z):
         X = ukf.step(dt, Z[:,i+1])
         # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
-    print("X_Estimeted=",X_c)
+    # print("X_Estimeted=",X_c)
     return X_c 
 
 X_c = estimate(Z)
@@ -243,7 +242,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 1
+    num_iterations = 100
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
@@ -255,13 +254,10 @@ def calc_std_err(X):
 
 
 tg3G = Target()
-tg3G.init_state({'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4})
+tg3G.init_state(init_state)
 
-n=18 # for dt = 1
-# n=50 # for dt = 0.25
 X_true_data_not_pass_3G = make_true(tg3G,n)
 std_err_3G = calc_std_err(X_true_data_not_pass_3G)
-
 
 
 plt.figure(num="3G")
@@ -310,7 +306,7 @@ plt.subplot(9, 1, 8)
 plt.plot((np.arange(len(std_err_3G[7, :])))*dt, std_err_3G[7, :])
 plt.grid(True)
 plt.xlabel('Time,s')
-plt.ylabel('std_vx, m/s')
+plt.ylabel('std_vz, m/s')
 
 plt.subplot(9, 1, 9)
 plt.plot((np.arange(len(std_err_3G[8, :])))*dt, std_err_3G[8, :])
