@@ -19,19 +19,17 @@ private:
     M extrapolatedStateSigmaVectors;
     StateFunc<M> stateFunc;
     MeasurementFunc<M> measFunc;
-    double T;
 
 public:
     Predict<M> predictStruct;
     Correct<M> correctStruct;
 
-    M predict();
+    M predict(double dt);
     M correct(const M &Z);
 
-    UnscentedKalmanfilter(const M& X, double t, const M& procNoise, const M& measNoiseMatRadian , Points points): 
+    UnscentedKalmanfilter(const M& X, const M& procNoise, const M& measNoiseMatRadian , Points points): 
                                                                                                             UKfilterMath(measNoiseMatRadian, procNoise, points)    
                                                                                                             {   
-                                                                                                                T = t;
                                                                                                                 correctStruct.X = X;
                                                                                                                 correctStruct.P.resize(X.rows(),X.rows());
                                                                                                                 correctStruct.P.setZero();
@@ -42,13 +40,13 @@ template <class M,
           template <typename> class StateFunc,
           template <typename> class MeasurementFunc>
 
-M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict()
+M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc>::predict(double dt)
 {
     correctStruct.P = UKfilterMath.make_P_cart(correctStruct.P, correctStruct.X);
     M sigmaVectors = UKfilterMath.doSigmaVectors(correctStruct.X,correctStruct.P);
-    extrapolatedStateSigmaVectors = stateFunc(sigmaVectors, T);
+    extrapolatedStateSigmaVectors = stateFunc(sigmaVectors, dt);
     predictStruct.Xe = UKfilterMath.doExtrapolatedStateVector(extrapolatedStateSigmaVectors);
-    predictStruct.Pe = UKfilterMath.doCovMatExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictStruct.Xe, T);
+    predictStruct.Pe = UKfilterMath.doCovMatExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictStruct.Xe, dt);
 
     return predictStruct.Xe;
 }

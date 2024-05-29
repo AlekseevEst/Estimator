@@ -28,22 +28,22 @@ TEST_CASE("filtering_ukf_CT")
     Eigen::MatrixXd expectedCorrectState(7,1);
     Eigen::MatrixXd expectedPredState(7,1);
     
-    expectedPredState << 9922.95, 3.05202e-12, 19978.7, 0.0, 9955.8, 0.0, 0.0;
-    expectedCorrectState << 9924.15, -72.5096, 20018.5, -5.76338, 10033.4, 210.858, 0.0;
+    expectedPredState << 9922.95, 0.0, 19978.7, 0.0, 9955.8, 0.0, 0.0;
+    expectedCorrectState << 9933.22, 0.0, 20019.3, 0.0, 10035.2, 224.576, 0.0;
     
     Points p;
     p.alpha = 1e-3;
     p.beta = 2;
     p.kappa = -4;
 
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSph> ukf (X,t,Q,R,p);
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSphCVCT> ukf (X,Q,R,p);
     // std::cout<<ukf.predict();
     // std::cout<<ukf.correct(Z);
-    CHECK(ukf.predict().isApprox(expectedPredState,0.00001));
+    CHECK(ukf.predict(t).isApprox(expectedPredState,0.00001));
     CHECK(ukf.correct(Z).isApprox(expectedCorrectState,0.00001));
 
     BENCHMARK("STEP"){
-        ukf.predict();
+        ukf.predict(t);
         ukf.correct(Z);
     };
 }

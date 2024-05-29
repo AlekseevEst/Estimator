@@ -51,6 +51,7 @@ M UnscentedKalmanFilterMath<M>::make_P_cart(const M& P, const M& X)
         // PRINTM(P0);
         return P0;
     }
+    // PRINTM(P);
     return P;
 }
 
@@ -90,9 +91,10 @@ M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, co
     {
         M dX = Xue.col(i) - Xe;
         Pe = Pe + sigmaPoints.Wc[i] * (dX * dX.transpose());
-    }
 
-    Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t);
+    }
+    
+    Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t, Xe.rows());
     // PRINTM(Pe);
     
     return Pe;
@@ -108,7 +110,6 @@ M UnscentedKalmanFilterMath<M>::doExtrapolatedMeasVector(const M &Zue)
     {
         Ze = Ze + sigmaPoints.Wm[i] * Zue.col(i);
     }
-    // PRINTM(Ze);
     return Ze;
 }
 
@@ -143,7 +144,6 @@ M UnscentedKalmanFilterMath<M>::calcGainFilter(const M &Xue, const M &Xe, const 
         M v = Zue.col(i) - Ze;
         // PRINTM(v);
         Pxz = Pxz + sigmaPoints.Wc[i] * dX * v.transpose();
-       
     }
     // PRINTM(Pxz);
     M gainKalman = Pxz * Se.inverse();

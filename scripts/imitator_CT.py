@@ -24,14 +24,13 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-# tg1.init_state({'x':1000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0}) #ошибка +pi-pi 
-# tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0,'w':0.0})
 
-tg1.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':5.614986})
+init_state2G = {'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':5.614986}
+init_state5G = {'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':14.04}
+init_state8G = {'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':22.46}
 
-# tg1.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':14.04})
-
-# tg1.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':22.46})
+tg1.init_state(init_state2G)
+n = 125
 
 def remove_zero_columns(arr):
 
@@ -69,9 +68,8 @@ def make_true (tg1,n):
     # plt.plot(x1,y1,'b')
     # plt.grid(True)
     return (X_true_data_not_pass)
-# n = 7
-# n = 50
-n = 125
+
+
 X_true_data_not_pass = make_true(tg1,n)
 
 X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
@@ -154,7 +152,7 @@ def do_measurement(X_plusProcNoise,R, pass_index):
 Z = do_measurement (X_true_plus_ProcNoise_with_pass, R, pass_index)
 # #==================Отрисовка==================
 Z_not_pass = Z
-print('Z=', Z)
+# print('Z=', Z)
 dictData = {}
 dictData['DeltaTime'] = dt
 dictData['Measurement'] = Z.tolist()
@@ -179,26 +177,25 @@ def estimate (Z,w):
     
     Z_cart = Zsph2cart(Z)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.,w]) # инициализируем вектор состояния, равный первому измерению
-    print('X0=',X0)
+    # print('X0=',X0)
     point = estimator.Points()
     point.alpha = 1e-3
     point.beta = 2
     point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CT(X0,dt,Qp,R,point) #инициал. фильтра
+    ukf = estimator.BindTrackUkf_CT(X0,Qp,R,point) #инициал. фильтра
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
         if np.all(Z[:,i+1] == 0):
             X = ukf.step(dt)
             X_c = np.append(X_c,X,axis=1)
             continue
-        print('Z=',Z[:,i+1])
-        X = ukf.step(Z[:,i+1])
-        print('X=',X)
+        X = ukf.step(dt, Z[:,i+1])
+        # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
     return X_c 
 w = 0.0
 X_c = estimate(Z,w)
-print(X_c)
+# print(X_c)
 
 # def err1(X_c,X_true_plus_ProcNoise):
 
@@ -248,24 +245,24 @@ def calc_std_err(X,w):
     return np.sqrt(var_err)
 
 tg2G = Target()
-tg2G.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':5.614986})
+tg2G.init_state(init_state2G)
 n=125
 X_true_data_not_pass_2G = make_true(tg2G,n)
 w = 0.0
 std_err_2G = calc_std_err(X_true_data_not_pass_2G,w)
 
 tg5G = Target()
-tg5G.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':14.04})
+tg5G.init_state(init_state5G)
 n=50
 X_true_data_not_pass_5G = make_true(tg5G,n)
 w = 0.0
 std_err_5G = calc_std_err(X_true_data_not_pass_5G, w)
 
 tg8G = Target()
-tg8G.init_state({'x':10000.0,'y':20000.0,'z':10000.0, 'vx':-200.0,'vy':0.0,'vz':0.0,'w':22.46})
+tg8G.init_state(init_state8G)
 n=31
 X_true_data_not_pass_8G = make_true(tg8G,n)
-w = 0.392
+w = 0.0
 std_err_8G = calc_std_err(X_true_data_not_pass_8G,w)
 
 
@@ -378,7 +375,7 @@ plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vz, m/s')
 plt.subplot(7, 1, 7)
-plt.plot((np.arange(len(std_err_5G[6, 0:50]))+1)*dt, std_err_5G[6, 0:50])
+plt.plot((np.arange(len(std_err_8G[6, 0:50]))+1)*dt, std_err_8G[6, 0:50])
 plt.xlabel('Time,s')
 plt.ylabel('std_w, deg')
 plt.grid(True)

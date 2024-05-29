@@ -1,14 +1,14 @@
 #include "bind_track.h"
 namespace py = pybind11;
 
-// Points Points_CV;
-class BindTrackUkf_CV
+class BindTrackUkf_CA
 {
 private:
-    Track<Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSphCVCT>> track;
-
+    Track<Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstAcceleration, FuncMeasSphCA>> track;
+    
 public:
-    BindTrackUkf_CV(Eigen::MatrixXd state,
+    
+    BindTrackUkf_CA(Eigen::MatrixXd state,
                     Eigen::MatrixXd processNoise,
                     Eigen::MatrixXd measureNoise,
                     Points points) : track(state, processNoise, measureNoise, points) {}
@@ -24,12 +24,11 @@ public:
     }
 };
 
-void bind_track_CV(pybind11::module &m)
+void bind_track_CA(pybind11::module &m)
 {
-    py::class_<BindTrackUkf_CV>(m, "BindTrackUkf_CV")
+    py::class_<BindTrackUkf_CA>(m, "BindTrackUkf_CA")
         .def(py::init<const Eigen::MatrixXd&, const Eigen::MatrixXd&, const Eigen::MatrixXd&, Points>())
-        .def("step", (Eigen::MatrixXd(BindTrackUkf_CV::*)(double, const Eigen::MatrixXd &)) & BindTrackUkf_CV::step)
-        .def("step", (Eigen::MatrixXd(BindTrackUkf_CV::*)(double)) & BindTrackUkf_CV::step);
+        .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(double, const Eigen::MatrixXd &)) & BindTrackUkf_CA::step)
+        .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(double)) & BindTrackUkf_CA::step);
 
 }
-

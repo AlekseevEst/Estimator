@@ -11,10 +11,10 @@ import estimator
 from models import Target
 
 dt = 6.0
-pd = 0.9
+pd = 1.0
 
-R_with_vr = np.diag([10000.0, 0.57, 0.57, 25.0])
-R_without_vr = np.diag([10000.0, 0.57, 0.57])
+R_with_vr = np.diag([10000.0, (0.1/3.0)**2, (0.1/3.0)**2, 25.0])
+R_without_vr = np.diag([10000.0, (0.1/3.0)**2, (0.1/3.0)**2])
 
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
@@ -24,8 +24,9 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-# tg1.init_state({'x':120000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0})
-tg1.init_state({'x':0.0,'y':0.0,'z':0.0, 'vx':200.0,'vy':0.0,'vz':0.0})
+init_state = {'x':130000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0}
+
+tg1.init_state(init_state)
 
 def remove_zero_columns(arr):
 
@@ -78,7 +79,7 @@ with_pass = remove_zero_columns(X_true_data_with_pass)
 
 # ================= Блок 2 =================
 # создание истинной зашумленной траектории
-process_var = 0.5
+process_var = 0.00001
 Qp = np.diag([process_var, process_var, process_var])
 G = np.array([[dt**2/2,  0.0,         0.0],
              [dt,       0.0,          0.0],
@@ -116,8 +117,6 @@ def do_measurement(X_plusProcNoise,R_with_vr, pass_index):
 
     X_plusProcNoise[:, pass_index] = 0
     r_true_with_noise = np.sqrt(np.array(X_plusProcNoise[0])**2 + np.array(X_plusProcNoise[2])**2 + np.array(X_plusProcNoise[4])**2)
-    # az_true_with_noise = np.arctan2(np.array(X_plusProcNoise[2]),np.array(X_plusProcNoise[0]))
-    # um_true_with_noise = np.arctan2(np.array(X_plusProcNoise[4]),np.sqrt(np.array(X_plusProcNoise[0])**2+np.array(X_plusProcNoise[2])**2))
     az_true_with_noise = np.rad2deg(np.arctan2(np.array(X_plusProcNoise[2]),np.array(X_plusProcNoise[0]))) # Азимут
     um_true_with_noise = np.rad2deg(np.arctan2(np.array(X_plusProcNoise[4]),np.sqrt(np.array(X_plusProcNoise[0])**2+np.array(X_plusProcNoise[2])**2))) # Угол места
   
@@ -143,25 +142,29 @@ Z, Zvr = do_measurement (X_true_plus_ProcNoise_with_pass, R_with_vr, pass_index)
 
 Ztmp = remove_zero_columns(Z)
 Zc = Zsph2cart(Ztmp)
+
+print ("Zc",Zc)
 # ================= Блок 4 ===================
 def estimate (Z):
 
     Z_cart = Zsph2cart(Z)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
+    # print ("X0", X0)
+
     point = estimator.Points()
     point.alpha = 1e-3
     point.beta = 2
     point.kappa = 3 - X0.shape[0]
 
-    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_without_vr,point) #инициал. фильтра
+    ukf = estimator.BindTrackUkf_CV(X0,Qp,R_without_vr,point) #инициал. фильтра
     
     X_c = np.empty((len(X0), 0))
     for i in range (Z.shape[1]-1):
         if np.all(Z[:,i+1] == 0):
-            X = ukf.step()
+            X = ukf.step(dt)
             X_c = np.append(X_c,X,axis=1)
             continue
-        X = ukf.step(Z[:,i+1])
+        X = ukf.step(dt, Z[:,i+1])
         X_c = np.append(X_c,X,axis=1)
     return X_c 
 
@@ -169,26 +172,28 @@ def estimate_with_vr (Zvr):
 
     Z_cart = Zsph2cart(Zvr)
     X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
+    # print ("X0", X0)
     point = estimator.Points()
     point.alpha = 1e-3
     point.beta = 2
     point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CV(X0,dt,Qp,R_with_vr,point) #инициал. фильтра
+    ukf = estimator.BindTrackUkf_CV(X0,Qp,R_with_vr,point) #инициал. фильтра
     
     X_c = np.empty((len(X0), 0))
     for i in range (Zvr.shape[1]-1):
         if np.all(Zvr[:,i+1] == 0):
-            X = ukf.step()
+            X = ukf.step(dt)
             X_c = np.append(X_c,X,axis=1)
             continue
-        X = ukf.step(Zvr[:,i+1])
+        X = ukf.step(dt, Zvr[:,i+1])
         X_c = np.append(X_c,X,axis=1)
     return X_c 
 
 
 X_c = estimate(Z)
 X_c_with_Vr = estimate_with_vr(Zvr)
-
+# print ("X_c",X_c)
+# print ("X_c_with_Vr",X_c_with_Vr)
 def err1(X_c,X_true_plus_ProcNoise):
 
     er = X_c[:,:] - X_true_plus_ProcNoise [:,1:]
@@ -228,7 +233,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 2
+    num_iterations = 1
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
     var_err_with_vr = np.zeros((X.shape[0], X.shape[1]-1))
 

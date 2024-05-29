@@ -14,9 +14,9 @@ public:
     static M rot_Y(const double &val);
     static std::pair<M, M> sph2cartcov(const M &sphCov, const double &r, const double &az, const double &el);
     static M do_cart_P0(std::pair<M, M> cartCov, int numOfParameters);
-    static M doMatrixNoiseProc_Q(M procVar, double T);
+    static M doMatrixNoiseProc_Q(M procVar, double T, int size);
     static Measurement make_Z0(const M &X);
-    static M RsphRad2RsphDeg(const M &R);
+    // static M RsphRad2RsphDeg(const M &R);
     static double ComputeAngleDifference(double angle1, double angle2);
     static M sqrtMat(const M& P);
     static bool CheckingConditionsMat(const M& P);
@@ -32,12 +32,14 @@ enum class SizeMat
     ROW4 = 4,
     ROW6 = 6,
     ROW7 = 7,
+    ROW9 = 9,
     COL0 = 0,
     COL1 = 1,
     COL3 = 3,
     COL4 = 4,
     COL6 = 6,
-    COL7 = 7
+    COL7 = 7,
+    COL9 = 9
 };
 enum class MeasPositionMat
 {
@@ -53,7 +55,14 @@ enum class CoordPositionMat
     VY =3,
     Z = 4,
     VZ =5,
-    W = 6
+    W = 6,
+
+    X_CA = 0,
+    Y_CA = 3,
+    Z_CA = 6,
+    VX_CA = 1,
+    VY_CA = 4,
+    VZ_CA = 7
 };
 
 enum class SphPos{
@@ -116,6 +125,7 @@ std::pair<M, M> Utils<M>::sph2cartcov(const M &sphCov, const double &r, const do
     M rot = rot_Z(az) * rot_Y(el).transpose();
     M posCov = rot * Rpos * rot.transpose();
     M velCov = M::Zero(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL3));
+    
     if (sphCov.rows()== ENUM_TO_INT(SizeMat::ROW4) && sphCov.cols()== ENUM_TO_INT(SizeMat::COL4))
     {
         double rrSig = sqrt(sphCov(3,3));
@@ -138,7 +148,29 @@ M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
 {
     M posCov = cartCov.first;
     M velCov = cartCov.second;
-    
+
+    if (numOfParameters == ENUM_TO_INT(SizeMat::ROW9))
+    {
+        M Hp(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL9));
+        Hp << 1, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 1, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 1, 0, 0;
+
+        M Hv(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL9));
+        Hv << 0, 1, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 1, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 0, 1, 0;
+
+        M Ha(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL9));
+        Ha << 0, 0, 1, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 1, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 1;
+
+        M AccelerationCov = M::Zero(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL3));
+        AccelerationCov.diagonal() << pow(50,2), pow(50,2), pow(50,2);
+        M P = Hp.transpose() * posCov * Hp + Hv.transpose() * velCov * Hv + Ha.transpose() * AccelerationCov * Ha;
+        return P;
+    }
         M Hp(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL6));
         Hp << 1, 0, 0, 0, 0, 0,
             0, 0, 1, 0, 0, 0,
@@ -155,16 +187,16 @@ M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
     {
         M PAngleVel = M::Zero(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL7));
         PAngleVel.block(ENUM_TO_INT(SizeMat::ROW0),ENUM_TO_INT(SizeMat::COL0),ENUM_TO_INT(SizeMat::ROW6),ENUM_TO_INT(SizeMat::COL6)) = P;
-        PAngleVel(ENUM_TO_INT(SizeMat::ROW6),ENUM_TO_INT(SizeMat::COL6)) = 400.0;
+        PAngleVel(ENUM_TO_INT(SizeMat::ROW6),ENUM_TO_INT(SizeMat::COL6)) = pow(22,2);
         return PAngleVel;
     }
     return P;
 }
 
 template <class M>
-M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
+M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
 {
-    if (Q.rows() == ENUM_TO_INT(SizeMat::COL3))
+    if (size == ENUM_TO_INT(SizeMat::ROW6))
     {
         M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
         G << (T * T) / 2.0,          0.0,            0.0,
@@ -176,7 +208,8 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
         M Qp = G * Q * G.transpose();
         return Qp;
     }
-
+    if (size == ENUM_TO_INT(SizeMat::ROW7))
+    {
     M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
     G << (T * T) / 2.0,      0.0,               0.0,          0.0,
                T,            0.0,               0.0,          0.0,
@@ -187,6 +220,22 @@ M Utils<M>::doMatrixNoiseProc_Q(M Q, double T)
               0.0,           0.0,               0.0,          1.0;
 
     M Qp = G * Q * G.transpose();
+    return Qp;
+    }
+
+    M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
+    G << (T * T) / 2.0,      0.0,               0.0,
+               T,            0.0,               0.0,
+              1.0,           0.0,               0.0,         
+              0.0,      (T * T) / 2.0,          0.0,         
+              0.0,            T,                0.0,
+              0.0,           1.0,               0.0,         
+              0.0,           0.0,          (T * T) / 2.0,    
+              0.0,           0.0,                T,          
+              0.0,           0.0,               1.0;
+
+    M Qp = G * Q * G.transpose();
+    // PRINTM(Qp);
     return Qp;
 }
 
@@ -232,8 +281,8 @@ template <class M>
 double Utils<M>::ComputeAngleDifference(double angle1, double angle2)
 {
 
-    double diff = std::arg(std::complex<double>(cos(angle1 - angle2)*(M_PI/180.0), sin((angle1 - angle2)*(M_PI/180.0))));
-    return diff * (180.0/M_PI);
+    double diff = std::arg(std::complex<double>(cos(angle1 - angle2), sin((angle1 - angle2))));
+    return diff;
 }
 
 template <class M>
@@ -255,3 +304,4 @@ M Utils<M>::sqrtMat(const M& P)
     M L = lltofP.matrixL();
     return L;
 }
+
