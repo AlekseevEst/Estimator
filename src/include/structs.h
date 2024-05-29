@@ -23,9 +23,17 @@ struct Measurement
     double az_meas;
     double um_meas;
 };
-struct Points
+struct ParamSigmaPoints
 {
     double alpha;
     double beta;
     double kappa;
+};
+
+template<class M>
+struct Detection
+{
+    double timePoint;
+    M point;
+    //M SKO_measurement;
 };

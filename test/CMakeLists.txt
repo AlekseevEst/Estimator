@@ -3,7 +3,7 @@
 option(ESTIMATOR_ADD_TESTS "Add estimator tests to CTest" ON)
 
 #### Добавление исполняемого файла ...#####################################
-set(sources_list_test test.cpp test_ukf.cpp test_angle.cpp)
+set(sources_list_test ${CMAKE_CURRENT_SOURCE_DIR}/test)
 add_executable(estimator_unit_tests ${sources_list_test})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
