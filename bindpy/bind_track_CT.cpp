@@ -11,7 +11,7 @@ public:
     BindTrackUkf_CT(Eigen::MatrixXd state,                 
                     Eigen::MatrixXd processNoise,
                     Eigen::MatrixXd measureNoise,
-                    Points points) : track(state, processNoise, measureNoise, points) {}
+                    ParamSigmaPoints paramSigmaPoints) : track(state, processNoise, measureNoise, paramSigmaPoints) {}
 
     Eigen::MatrixXd step(double dt, const Eigen::MatrixXd &meas)
     {
@@ -27,12 +27,12 @@ public:
 void bind_track_CT(pybind11::module &m)
 {
     py::class_<BindTrackUkf_CT>(m, "BindTrackUkf_CT")
-        .def(py::init<const Eigen::MatrixXd&, const Eigen::MatrixXd&, const Eigen::MatrixXd&, Points>())
+        .def(py::init<const Eigen::MatrixXd&, const Eigen::MatrixXd&, const Eigen::MatrixXd&, ParamSigmaPoints>())
         .def("step", (Eigen::MatrixXd(BindTrackUkf_CT::*)(double, const Eigen::MatrixXd &)) & BindTrackUkf_CT::step)
         .def("step", (Eigen::MatrixXd(BindTrackUkf_CT::*)(double)) & BindTrackUkf_CT::step);
-    py::class_<Points>(m,"Points")
+    py::class_<ParamSigmaPoints>(m,"ParamSigmaPoints")
         .def(py::init<>())
-        .def_readwrite("alpha", &Points::alpha) 
-        .def_readwrite("beta", &Points::beta)
-        .def_readwrite("kappa",&Points::kappa);   
+        .def_readwrite("alpha", &ParamSigmaPoints::alpha) 
+        .def_readwrite("beta", &ParamSigmaPoints::beta)
+        .def_readwrite("kappa",&ParamSigmaPoints::kappa);   
 }

@@ -2,17 +2,19 @@
 #include "ukf.h"
 
 
-template<class M, class StateModel, class MeasureModel>
+template<class M, class StateModel, class MeasureModel, class ControlFunc>
 struct InitUKFStateModelCAMeasureModelSph
 {
     M X0;
-    M measurementNoise;
-    M proccesNoise;
+    M P0;
+    M  processNoise;
+    M  measurementNoise;
     ParamSigmaPoints p;
+    ControlFunc controlFunc;
 
-    std::unique_ptr<UnscentedKalmanfilter<M,StateModel,MeasureModel>> make_estimator()
+    std::unique_ptr<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>> make_estimator()
     {
-        return std::make_unique<UnscentedKalmanfilter<M,StateModel,MeasureModel>>(X0, proccesNoise, measurementNoise, p);
+        return std::make_unique<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>>(X0, processNoise, measurementNoise, p);
     }
 
     void InitializationEstimator(const Detection<M>& detection)
@@ -24,7 +26,6 @@ struct InitUKFStateModelCAMeasureModelSph
         // Hp << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         //       0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         //       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
-
 
         SpMat Hp(3,9);
         std::vector<T> tripletList;
@@ -48,17 +49,21 @@ struct InitUKFStateModelCAMeasureModelSph
         p.kappa = 3.0 - X0.rows();
         //-------------------------------------------------------------------------
      
-        proccesNoise.resize (3,3);
-        proccesNoise <<  process_var,            0.0,          0.0,
+        M Qp (3,3);
+        Qp <<  process_var,            0.0,          0.0,
                                 0.0,        process_var,       0.0,
                                 0.0,             0.0,      process_var;
+
+
+        M G = controlFunc(dt); 
+        processNoise = G * Qp * G.transpose();
+
         
         measurementNoise.resize(3,3);
         measurementNoise << pow(sko_range,2),          0.0,                  0.0,
                                     0.0,         pow(sko_Az,2),              0.0,
                                     0.0,                0.0,            pow(sko_Um,2);
 
-         
     }
 };
 

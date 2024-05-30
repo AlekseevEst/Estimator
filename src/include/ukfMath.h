@@ -8,11 +8,11 @@ template <class M>
 struct UnscentedKalmanFilterMath
 {
 
-    UnscentedKalmanFilterMath(const M &measNoiseMat, const M &procNoise, Points &p);
+    UnscentedKalmanFilterMath(const M &measNoiseMat, const M &procNoise, ParamSigmaPoints &p);
     M make_P_cart(const M& P, const M& X);
     M doSigmaVectors(const M& X, const M& P);
     M doExtrapolatedStateVector(const M &Xue);
-    M doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, double t);
+    M doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, const M& G, double t);
     M doExtrapolatedMeasVector(const M &Zue);
     M doCovMatExtrapolatedMeasVector(const M &Zue,const M& Ze);
     M calcGainFilter(const M &Xue, const M &Xe, const M &Zue, const M &Ze, const M &Se);
@@ -25,18 +25,18 @@ struct UnscentedKalmanFilterMath
     M R_sph_deg;
     M Q;
     size_t n;
-    Points points;
+    ParamSigmaPoints paramSigmaPoints;
     SigmaPoints<M> sigmaPoints;
     
 };
 
 template <class M>
-UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &measNoiseMat, const M &procNoise, Points &p)
+UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &measNoiseMat, const M &procNoise, ParamSigmaPoints &p)
 {   
     SigmaPoints<M> sigmaPoints;
     R_sph_deg = measNoiseMat;
     Q = procNoise; 
-    points = p;
+    paramSigmaPoints = p;
 }
 
 template <class M>
@@ -59,8 +59,8 @@ template <class M>
 M UnscentedKalmanFilterMath<M>::doSigmaVectors(const M& X, const M& P)
 {
     //----------СОЗДАЕМ Xu СИГМА-ВЕКТОРОВ------------------
-    M Xu = sigmaPoints.compute_sigma_points(X, P, points);
-    sigmaPoints.compute_weights(points);
+    M Xu = sigmaPoints.compute_sigma_points(X, P, paramSigmaPoints);
+    sigmaPoints.compute_weights(paramSigmaPoints);
     return Xu;
 }
 
@@ -82,7 +82,7 @@ M UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(const M &Xue)
 }
 
 template <class M>
-M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, double t)
+M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, const M& G, double t)
 {
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ
     M Pe = M::Zero(Xue.rows(), Xue.rows());
@@ -94,7 +94,7 @@ M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, co
 
     }
     
-    Pe = Pe + Utils<M>::doMatrixNoiseProc_Q(Q, t, Xe.rows());
+    Pe = Pe + G*Q*G.transpose();
     // PRINTM(Pe);
     
     return Pe;

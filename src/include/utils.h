@@ -193,51 +193,51 @@ M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
     return P;
 }
 
-template <class M>
-M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
-{
-    if (size == ENUM_TO_INT(SizeMat::ROW6))
-    {
-        M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
-        G << (T * T) / 2.0,          0.0,            0.0,
-                    T,               0.0,            0.0,
-                   0.0,         (T * T) / 2.0,       0.0,
-                   0.0,               T,             0.0,
-                   0.0,              0.0,       (T * T) / 2.0,
-                   0.0,              0.0,             T;
-        M Qp = G * Q * G.transpose();
-        return Qp;
-    }
-    if (size == ENUM_TO_INT(SizeMat::ROW7))
-    {
-    M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
-    G << (T * T) / 2.0,      0.0,               0.0,          0.0,
-               T,            0.0,               0.0,          0.0,
-              0.0,      (T * T) / 2.0,          0.0,          0.0,
-              0.0,            T,                0.0,          0.0,
-              0.0,           0.0,          (T * T) / 2.0,     0.0,
-              0.0,           0.0,                T,           0.0,
-              0.0,           0.0,               0.0,          1.0;
+// template <class M>
+// M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
+// {
+//     if (size == ENUM_TO_INT(SizeMat::ROW6))
+//     {
+//         M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
+//         G << (T * T) / 2.0,          0.0,            0.0,
+//                     T,               0.0,            0.0,
+//                    0.0,         (T * T) / 2.0,       0.0,
+//                    0.0,               T,             0.0,
+//                    0.0,              0.0,       (T * T) / 2.0,
+//                    0.0,              0.0,             T;
+//         M Qp = G * Q * G.transpose();
+//         return Qp;
+//     }
+//     if (size == ENUM_TO_INT(SizeMat::ROW7))
+//     {
+//     M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
+//     G << (T * T) / 2.0,      0.0,               0.0,          0.0,
+//                T,            0.0,               0.0,          0.0,
+//               0.0,      (T * T) / 2.0,          0.0,          0.0,
+//               0.0,            T,                0.0,          0.0,
+//               0.0,           0.0,          (T * T) / 2.0,     0.0,
+//               0.0,           0.0,                T,           0.0,
+//               0.0,           0.0,               0.0,          1.0;
 
-    M Qp = G * Q * G.transpose();
-    return Qp;
-    }
+//     M Qp = G * Q * G.transpose();
+//     return Qp;
+//     }
 
-    M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
-    G << (T * T) / 2.0,      0.0,               0.0,
-               T,            0.0,               0.0,
-              1.0,           0.0,               0.0,         
-              0.0,      (T * T) / 2.0,          0.0,         
-              0.0,            T,                0.0,
-              0.0,           1.0,               0.0,         
-              0.0,           0.0,          (T * T) / 2.0,    
-              0.0,           0.0,                T,          
-              0.0,           0.0,               1.0;
+//     M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
+//     G << (T * T) / 2.0,      0.0,               0.0,
+//                T,            0.0,               0.0,
+//               1.0,           0.0,               0.0,         
+//               0.0,      (T * T) / 2.0,          0.0,         
+//               0.0,            T,                0.0,
+//               0.0,           1.0,               0.0,         
+//               0.0,           0.0,          (T * T) / 2.0,    
+//               0.0,           0.0,                T,          
+//               0.0,           0.0,               1.0;
 
-    M Qp = G * Q * G.transpose();
-    // PRINTM(Qp);
-    return Qp;
-}
+//     M Qp = G * Q * G.transpose();
+//     // PRINTM(Qp);
+//     return Qp;
+// }
 
 template <class M>
 Measurement Utils<M>::make_Z0(const M &X)

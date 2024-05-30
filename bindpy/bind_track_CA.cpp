@@ -11,7 +11,7 @@ public:
     BindTrackUkf_CA(Eigen::MatrixXd state,
                     Eigen::MatrixXd processNoise,
                     Eigen::MatrixXd measureNoise,
-                    Points points) : track(state, processNoise, measureNoise, points) {}
+                    ParamSigmaPoints points) : track(state, processNoise, measureNoise, points) {}
 
     Eigen::MatrixXd step(double dt, const Eigen::MatrixXd &meas)
     {
@@ -27,7 +27,7 @@ public:
 void bind_track_CA(pybind11::module &m)
 {
     py::class_<BindTrackUkf_CA>(m, "BindTrackUkf_CA")
-        .def(py::init<const Eigen::MatrixXd&, const Eigen::MatrixXd&, const Eigen::MatrixXd&, Points>())
+        .def(py::init<const Eigen::MatrixXd&, const Eigen::MatrixXd&, const Eigen::MatrixXd&, ParamSigmaPoints>())
         .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(double, const Eigen::MatrixXd &)) & BindTrackUkf_CA::step)
         .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(double)) & BindTrackUkf_CA::step);
 
