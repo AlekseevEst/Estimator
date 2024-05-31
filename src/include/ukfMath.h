@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Eigen/Dense"
+#include "Eigen/Sparse"
 #include "structs.h"
 #include "utils.h"
 #include "sigma_points.h"
@@ -12,7 +13,7 @@ struct UnscentedKalmanFilterMath
     M make_P_cart(const M& P, const M& X);
     M doSigmaVectors(const M& X, const M& P);
     M doExtrapolatedStateVector(const M &Xue);
-    M doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, const M& G, double t);
+    M doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, const M& G);
     M doExtrapolatedMeasVector(const M &Zue);
     M doCovMatExtrapolatedMeasVector(const M &Zue,const M& Ze);
     M calcGainFilter(const M &Xue, const M &Xe, const M &Zue, const M &Ze, const M &Se);
@@ -82,7 +83,7 @@ M UnscentedKalmanFilterMath<M>::doExtrapolatedStateVector(const M &Xue)
 }
 
 template <class M>
-M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, const M& G, double t)
+M UnscentedKalmanFilterMath<M>::doCovMatExtrapolatedStateVector(const M &Xue, const M& Xe, const M& G)
 {
     //-----------СТАТИСТИЧЕСКАЯ ОЦЕНКА МАТРИЦЫ КОВАРИАЦИИ ЭКСТРАПОЛИРОВАННОГО ВЕКТОРА СОСТОЯНИЯ
     M Pe = M::Zero(Xue.rows(), Xue.rows());

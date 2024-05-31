@@ -2,7 +2,11 @@
 #include "ukf.h"
 
 
-template<class M, class StateModel, class MeasureModel, class ControlFunc>
+template<class M,
+         template <typename> class StateModel,
+         template <typename> class MeasureModel,
+         template <typename> class ControlFunc>
+
 struct InitUKFStateModelCAMeasureModelSph
 {
     M X0;
@@ -10,7 +14,7 @@ struct InitUKFStateModelCAMeasureModelSph
     M  processNoise;
     M  measurementNoise;
     ParamSigmaPoints p;
-    ControlFunc controlFunc;
+    ControlFunc<M> controlFunc;
 
     std::unique_ptr<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>> make_estimator()
     {
@@ -68,16 +72,17 @@ struct InitUKFStateModelCAMeasureModelSph
 };
 
 
-template<class M, class EstimatorType, class EstimatorInit>
+template<class M, class TypeEstimator, class TypeEstimatorInit>
 struct Track
 {
 private:
-    std::unique_ptr<EstimatorType> estimator;
+    std::unique_ptr<TypeEstimator> estimator;
     double timePoint;
 public:
     Track(const Detection<M>& detection)
     {
-        EstimatorInit estimatorInit(detection);
+        TypeEstimatorInit estimatorInit;
+        estimatorInit.InitializationEstimator(detection);
         estimator = estimatorInit.make_estimator();
         timePoint = detection.timePoint;
     }
@@ -104,9 +109,9 @@ public:
         {
         double dt = t - timePoint;
         timePoint = t;
-        estimator.correctStruct.X = estimator.predict(dt);
-        estimator.correctStruct.P = estimator.predictStruct.Pe;
-        return estimator.correctStruct.X;
+        estimator->correctStruct.X = estimator->predict(dt);
+        estimator->correctStruct.P = estimator->predictStruct.Pe;
+        return estimator->correctStruct.X;
         }
                 catch (const std::exception &e)
         {

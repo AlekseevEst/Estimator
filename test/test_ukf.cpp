@@ -31,12 +31,12 @@ TEST_CASE("filtering_ukf_CT")
     expectedPredState << 9922.95, 0.0, 19978.7, 0.0, 9955.8, 0.0, 0.0;
     expectedCorrectState << 9933.22, 0.0, 20019.3, 0.0, 10035.2, 224.576, 0.0;
     
-    Points p;
+    ParamSigmaPoints p;
     p.alpha = 1e-3;
     p.beta = 2;
     p.kappa = -4;
 
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSphCVCT> ukf (X,Q,R,p);
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW> ukf (X,Q,R,p);
     // std::cout<<ukf.predict();
     // std::cout<<ukf.correct(Z);
     CHECK(ukf.predict(t).isApprox(expectedPredState,0.00001));

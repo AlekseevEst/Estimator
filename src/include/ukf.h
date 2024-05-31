@@ -31,8 +31,8 @@ public:
     M predict(double dt);
     M correct(const M &Z);
 
-    UnscentedKalmanfilter(const M& X, const M& procNoise, const M& measNoiseMatRadian , Points points): 
-                                                                                                            UKfilterMath(measNoiseMatRadian, procNoise, points)    
+    UnscentedKalmanfilter(const M& X, const M& procNoise, const M& measNoiseMatRadian , ParamSigmaPoints paramSigmaPoints): 
+                                                                                                            UKfilterMath(measNoiseMatRadian, procNoise, paramSigmaPoints)    
                                                                                                             {                                                                                                   
                                                                                                                 correctStruct.X = X;
                                                                                                                 correctStruct.P.resize(X.rows(),X.rows());
@@ -52,7 +52,7 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::predict(dou
     extrapolatedStateSigmaVectors = stateFunc(sigmaVectors, dt);
     predictStruct.Xe = UKfilterMath.doExtrapolatedStateVector(extrapolatedStateSigmaVectors);
     M G = controlFunc(dt);
-    predictStruct.Pe = UKfilterMath.doCovMatExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictStruct.Xe, G, dt);
+    predictStruct.Pe = UKfilterMath.doCovMatExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictStruct.Xe, G);
 
     return predictStruct.Xe;
 }
