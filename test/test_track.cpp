@@ -5,43 +5,36 @@ using namespace Catch::Benchmark;
 TEST_CASE("Track")
 {
 
-    // Eigen::MatrixXd X(7, 1);
-    // Eigen::MatrixXd Z(3, 1);
-    // Eigen::MatrixXd Q(4, 4);
-    // Eigen::MatrixXd R(3, 3);
-    // X << 9922.94637347, 0.0, 19978.67752417, 0.0, 9955.79978476, 0.0, 0.0;
-    // Z << 24544.6547, 63.6329241, 24.192866;                 
+    Eigen::MatrixXd Z0(3, 1);
+    Eigen::MatrixXd Z1(3, 1);
 
-    // Q << 10.0,0.0,0.0,0.0,
-    //     0.0,10.0,0.0,0.0,
-    //     0.0,0.0,1.0,0.0,
-    //     0.0,0.0,0.0,1e-7;
-        
-    // R << 10000.0, 0.0, 0.0,
-    //     0.0, pow((0.1/3),2), 0.0,
-    //     0.0, 0.0, pow((0.1/3),2);
+    Z0 << 24544.6547, 63.6329241, 24.192866;                 
+    Z1 << 24844.6547, 65.6329241, 28.192866;    
 
-
-    // double t = 0.25;
-
-    // Eigen::MatrixXd expectedCorrectState(7,1);
-    // Eigen::MatrixXd expectedPredState(7,1);
+    Detection<Eigen::MatrixXd> d0;
+    Detection<Eigen::MatrixXd> d1;
+    d0.timePoint = 0.25;
+    d0.point = Z0;
+    d1.timePoint = 0.5;
+    d1.point = Z1;
+    Eigen::MatrixXd expectedCorrectState(9,1);
+    Eigen::MatrixXd expectedPredState(9,1);
     
     // expectedPredState << 9922.95, 0.0, 19978.7, 0.0, 9955.8, 0.0, 0.0;
     // expectedCorrectState << 9933.22, 0.0, 20019.3, 0.0, 10035.2, 224.576, 0.0;
     
-    // Points p;
-    // p.alpha = 1e-3;
-    // p.beta = 2;
-    // p.kappa = -4;
 
-    // UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSphCVCT> ukf (X,Q,R,p);
-    // // std::cout<<ukf.predict();
-    // // std::cout<<ukf.correct(Z);
+    Track <Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>, 
+                                                InitUKFStateModelCAMeasureModelSph<Eigen::MatrixXd,FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>> track (d0);
+  
+    Eigen::MatrixXd correct = track.step(d1);
+    PRINTM(correct);
+    // std::cout<<ukf.predict();
+    // std::cout<<ukf.correct(Z);
     // CHECK(ukf.predict(t).isApprox(expectedPredState,0.00001));
     // CHECK(ukf.correct(Z).isApprox(expectedCorrectState,0.00001));
 
-    // BENCHMARK("STEP"){
+    BENCHMARK("STEP"){
 
-    // };
+    };
 }

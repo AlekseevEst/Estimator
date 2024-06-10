@@ -6,6 +6,6 @@
 #include "track.h"
 #include "models.h"
 
-void bind_track_CV(pybind11::module &m);
-void bind_track_CT(pybind11::module &m);
+// void bind_track_CV(pybind11::module &m);
+// void bind_track_CT(pybind11::module &m);
 void bind_track_CA(pybind11::module &m);
