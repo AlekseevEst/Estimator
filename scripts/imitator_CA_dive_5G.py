@@ -180,26 +180,42 @@ plt.legend()
 # # ================= Блок 4 ===================
 
 def estimate (Z):
+    # meas = estimator.Measurement()
+    detection = estimator.Detection()
+
+    r_meas = Z[0,0]
+    az_meas = Z[1,0] 
+    um_meas = Z[2,0] 
     
-    Z_cart = Zsph2cart(Z)
-    X0 = np.vstack([Z_cart[0,0], 0.0, 0.0, Z_cart[1,0], 0.0, 0.0, Z_cart[2,0], 0.0, 0.0]) # инициализируем вектор состояния, равный первому измерению
-    # print('X0=',X0)
-    point = estimator.Points()
-    point.alpha = 1e-3
-    point.beta = 2
-    point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CA(X0,Qp,R,point) #инициал. фильтра
-    X_c = np.empty((len(X0), 0))
-    for i in range (Z.shape[1]-1):
-        if np.all(Z[:,i+1] == 0):
-            X = ukf.step(dt)
+    meas = np.array([[r_meas],[az_meas],[um_meas]])
+
+    detection.point = meas
+    detection.timePoint = dt
+
+    track = estimator.BindTrackUkf_CA(detection) #инициал. фильтра
+    X_c = np.empty((9, 0))
+
+    for i in range (1, Z.shape[1]):
+
+        r_meas = Z[0,i]
+        az_meas = Z[1,i]
+        um_meas = Z[2,i]
+        meas = ([[r_meas],[az_meas],[um_meas]])
+
+        detection.point = meas
+        detection.timePoint = (i * dt) + dt
+
+
+        if np.all(Z[:,i] == 0):
+            X = track.step(detection.timePoint)
             X_c = np.append(X_c,X,axis=1)
             continue
-        # print('Z=',Z[:,i+1])
-        X = ukf.step(dt, Z[:,i+1])
+        # print('Z=',Z[:,i])
+        X = track.step(detection)
         # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
     # print("X_Estimeted=",X_c)
+        
     return X_c 
 
 X_c = estimate(Z)
