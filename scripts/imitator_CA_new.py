@@ -10,7 +10,7 @@ import random
 import estimator
 from models import Target
 
-dt = 6.0
+dt = 1.0
 pd = 1.0
 
 R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg
@@ -257,7 +257,7 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 1000
+    num_iterations = 100
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
