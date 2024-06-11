@@ -20,7 +20,8 @@ public:
     static double ComputeAngleDifference(double angle1, double angle2);
     static M sqrtMat(const M& P);
     static bool CheckingConditionsMat(const M& P);
-
+    static M sph2CartMeas(const M& Z);
+    static double deg2rad(double val);
 private:
 };
 
@@ -65,12 +66,19 @@ enum class CoordPositionMat
     VZ_CA = 7
 };
 
-enum class SphPos{
+enum class SphPosMeas{
 
     POS_RANGE = 0,
     POS_AZIM,
     POS_ELEV, 
     POS_VR
+    
+};
+enum class CartPosMeas{
+
+    POS_X = 0,
+    POS_Y,
+    POS_Z
     
 };
 
@@ -193,51 +201,51 @@ M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
     return P;
 }
 
-template <class M>
-M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
-{
-    if (size == ENUM_TO_INT(SizeMat::ROW6))
-    {
-        M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
-        G << (T * T) / 2.0,          0.0,            0.0,
-                    T,               0.0,            0.0,
-                   0.0,         (T * T) / 2.0,       0.0,
-                   0.0,               T,             0.0,
-                   0.0,              0.0,       (T * T) / 2.0,
-                   0.0,              0.0,             T;
-        M Qp = G * Q * G.transpose();
-        return Qp;
-    }
-    if (size == ENUM_TO_INT(SizeMat::ROW7))
-    {
-    M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
-    G << (T * T) / 2.0,      0.0,               0.0,          0.0,
-               T,            0.0,               0.0,          0.0,
-              0.0,      (T * T) / 2.0,          0.0,          0.0,
-              0.0,            T,                0.0,          0.0,
-              0.0,           0.0,          (T * T) / 2.0,     0.0,
-              0.0,           0.0,                T,           0.0,
-              0.0,           0.0,               0.0,          1.0;
+// template <class M>
+// M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
+// {
+//     if (size == ENUM_TO_INT(SizeMat::ROW6))
+//     {
+//         M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
+//         G << (T * T) / 2.0,          0.0,            0.0,
+//                     T,               0.0,            0.0,
+//                    0.0,         (T * T) / 2.0,       0.0,
+//                    0.0,               T,             0.0,
+//                    0.0,              0.0,       (T * T) / 2.0,
+//                    0.0,              0.0,             T;
+//         M Qp = G * Q * G.transpose();
+//         return Qp;
+//     }
+//     if (size == ENUM_TO_INT(SizeMat::ROW7))
+//     {
+//     M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
+//     G << (T * T) / 2.0,      0.0,               0.0,          0.0,
+//                T,            0.0,               0.0,          0.0,
+//               0.0,      (T * T) / 2.0,          0.0,          0.0,
+//               0.0,            T,                0.0,          0.0,
+//               0.0,           0.0,          (T * T) / 2.0,     0.0,
+//               0.0,           0.0,                T,           0.0,
+//               0.0,           0.0,               0.0,          1.0;
 
-    M Qp = G * Q * G.transpose();
-    return Qp;
-    }
+//     M Qp = G * Q * G.transpose();
+//     return Qp;
+//     }
 
-    M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
-    G << (T * T) / 2.0,      0.0,               0.0,
-               T,            0.0,               0.0,
-              1.0,           0.0,               0.0,         
-              0.0,      (T * T) / 2.0,          0.0,         
-              0.0,            T,                0.0,
-              0.0,           1.0,               0.0,         
-              0.0,           0.0,          (T * T) / 2.0,    
-              0.0,           0.0,                T,          
-              0.0,           0.0,               1.0;
+//     M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
+//     G << (T * T) / 2.0,      0.0,               0.0,
+//                T,            0.0,               0.0,
+//               1.0,           0.0,               0.0,         
+//               0.0,      (T * T) / 2.0,          0.0,         
+//               0.0,            T,                0.0,
+//               0.0,           1.0,               0.0,         
+//               0.0,           0.0,          (T * T) / 2.0,    
+//               0.0,           0.0,                T,          
+//               0.0,           0.0,               1.0;
 
-    M Qp = G * Q * G.transpose();
-    // PRINTM(Qp);
-    return Qp;
-}
+//     M Qp = G * Q * G.transpose();
+//     // PRINTM(Qp);
+//     return Qp;
+// }
 
 template <class M>
 Measurement Utils<M>::make_Z0(const M &X)
@@ -304,4 +312,18 @@ M Utils<M>::sqrtMat(const M& P)
     M L = lltofP.matrixL();
     return L;
 }
+template<class M>
+double Utils<M>::deg2rad(double val)
+{
+    return val * (M_PI/180.0);
+}
 
+template <class M>
+M Utils<M>::sph2CartMeas(const M& Z)
+{
+    M cartMeas(ENUM_TO_INT(SizeMat::COL3),ENUM_TO_INT(SizeMat::COL1));
+    cartMeas(ENUM_TO_INT(CartPosMeas::POS_X),0) = Z(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0) * cos(deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_AZIM),0))) * cos(Utils<M>::deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0)));
+    cartMeas(ENUM_TO_INT(CartPosMeas::POS_Y),0) = Z(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0) * sin(deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_AZIM),0))) * cos(Utils<M>::deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0)));
+    cartMeas(ENUM_TO_INT(CartPosMeas::POS_Z),0) = Z(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0) * sin(deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0)));
+    return cartMeas;
+}

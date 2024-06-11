@@ -8,8 +8,8 @@ struct SigmaPoints
 {
 public:
     std::vector<double> Wc, Wm;
-    M compute_sigma_points(const M& X, const M& P, Points& points);
-    void compute_weights(Points & points);
+    M compute_sigma_points(const M& X, const M& P, ParamSigmaPoints& paramSigmaPoints);
+    void compute_weights(ParamSigmaPoints & paramSigmaPoints);
     
     double lamda;
     size_t n;
@@ -18,10 +18,10 @@ private:
 };
 
 template <class M>
-M SigmaPoints<M>::compute_sigma_points (const M& X, const M& P, Points & points)
+M SigmaPoints<M>::compute_sigma_points (const M& X, const M& P, ParamSigmaPoints & paramSigmaPoints)
 {   
     n = X.rows();
-    lamda = pow(points.alpha,2) * (n + points.kappa) - n;
+    lamda = pow(paramSigmaPoints.alpha,2) * (n + paramSigmaPoints.kappa) - n;
     M U = sqrt(lamda + n) * Utils<M>::sqrtMat(P);
 
     M Xu (n, 2*n+1);
@@ -46,13 +46,13 @@ M SigmaPoints<M>::compute_sigma_points (const M& X, const M& P, Points & points)
 }
 
 template <class M>
-void SigmaPoints<M>::compute_weights(Points& points)
+void SigmaPoints<M>::compute_weights(ParamSigmaPoints& paramSigmaPoints)
 {
-    lamda = pow(points.alpha,2) * (n + points.kappa) - n;
+    lamda = pow(paramSigmaPoints.alpha,2) * (n + paramSigmaPoints.kappa) - n;
     double c = 0.5/(n + lamda);
     Wc.assign(2 * n + 1, c);
     Wm.assign(2 * n + 1, c);
-    Wc[0] = lamda / (n + lamda) + (1 - pow(points.alpha,2) + points.beta);
+    Wc[0] = lamda / (n + lamda) + (1 - pow(paramSigmaPoints.alpha,2) + paramSigmaPoints.beta);
     Wm[0] = lamda / (n + lamda);
     // PRINTM(Wc[0]);
     // PRINTM(Wm[0]);
