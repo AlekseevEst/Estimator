@@ -13,12 +13,9 @@ from models import Target
 dt = 0.25
 pd = 1.0
 
-
 R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
-
-   
 
 # =============== Блок 1 ===================
     
@@ -51,8 +48,7 @@ def make_pass(X_true_data, pd): #при pd = 1 пропусков не буде�
     return xtmp, pass_columns
 
 def make_true (tg1,n): 
-    # n = 125 # количество измерении 
-    # n = np.pi*r
+
     x1=[];y1=[];z1=[]; vx1=[];vy1=[];vz1=[]; w=[]  
     for i in range(n):
         state1 = tg1.CT(dt)
@@ -65,8 +61,6 @@ def make_true (tg1,n):
         w.append(state1['w'])
 
     X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1,w])              
-    # plt.plot(x1,y1,'b')
-    # plt.grid(True)
     return (X_true_data_not_pass)
 
 
@@ -76,6 +70,7 @@ X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
 
 
 with_pass = remove_zero_columns(X_true_data_with_pass)
+
 # Создаем трехмерный scatter plot для массива
 # scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[2], z=with_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
 # fig2.add_trace(scatter2)
@@ -134,8 +129,8 @@ def do_measurement(X_plusProcNoise,R, pass_index):
     az_true_with_noise = np.rad2deg(np.arctan2(np.array(X_plusProcNoise[2]),np.array(X_plusProcNoise[0]))) # Азимут
     um_true_with_noise = np.rad2deg(np.arctan2(np.array(X_plusProcNoise[4]),np.sqrt(np.array(X_plusProcNoise[0])**2+np.array(X_plusProcNoise[2])**2))) # Угол места
 
-    vr_with_noise = (np.array(X_plusProcNoise[0])*np.array(X_plusProcNoise[1]) + np.array(X_plusProcNoise[2])*np.array(X_plusProcNoise[3]) + np.array(X_plusProcNoise[4])* np.array(X_plusProcNoise[5])) / r_true_with_noise 
-    vr_with_noise = np.nan_to_num(vr_with_noise, nan=0.)
+    # vr_with_noise = (np.array(X_plusProcNoise[0])*np.array(X_plusProcNoise[1]) + np.array(X_plusProcNoise[2])*np.array(X_plusProcNoise[3]) + np.array(X_plusProcNoise[4])* np.array(X_plusProcNoise[5])) / r_true_with_noise 
+    # vr_with_noise = np.nan_to_num(vr_with_noise, nan=0.)
 
     Zm = np.zeros((R.shape[0], X_plusProcNoise.shape[1]))
     for i in range(Zm.shape[1]):
@@ -153,6 +148,7 @@ Z = do_measurement (X_true_plus_ProcNoise_with_pass, R, pass_index)
 # #==================Отрисовка==================
 Z_not_pass = Z
 # print('Z=', Z)
+
 dictData = {}
 dictData['DeltaTime'] = dt
 dictData['Measurement'] = Z.tolist()
@@ -173,28 +169,45 @@ plt.legend()
 
 # # ================= Блок 4 ===================
 
-def estimate (Z,w):
+def estimate (Z):
+
+    detection = estimator.Detection()
+
+    r_meas = Z[0,0]
+    az_meas = Z[1,0] 
+    um_meas = Z[2,0] 
     
-    Z_cart = Zsph2cart(Z)
-    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.,w]) # инициализируем вектор состояния, равный первому измерению
-    # print('X0=',X0)
-    point = estimator.Points()
-    point.alpha = 1e-3
-    point.beta = 2
-    point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CT(X0,Qp,R,point) #инициал. фильтра
-    X_c = np.empty((len(X0), 0))
-    for i in range (Z.shape[1]-1):
-        if np.all(Z[:,i+1] == 0):
-            X = ukf.step(dt)
+    meas = np.array([[r_meas],[az_meas],[um_meas]])
+
+    detection.point = meas
+    detection.timePoint = dt
+
+    track = estimator.BindTrackUkf_CT(detection) #инициал. трассы
+    X_c = np.empty((7, 0))
+
+    for i in range (1, Z.shape[1]):
+
+        r_meas = Z[0,i]
+        az_meas = Z[1,i]
+        um_meas = Z[2,i]
+        meas = ([[r_meas],[az_meas],[um_meas]])
+
+        detection.point = meas
+        detection.timePoint = (i * dt) + dt
+
+        if np.all(Z[:,i] == 0):
+            X = track.step(detection.timePoint)
             X_c = np.append(X_c,X,axis=1)
             continue
-        X = ukf.step(dt, Z[:,i+1])
+        # print('Z=',Z[:,i])
+        X = track.step(detection)
         # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
+    # print("X_Estimeted=",X_c)
+        
     return X_c 
-w = 0.0
-X_c = estimate(Z,w)
+
+X_c = estimate(Z)
 # print(X_c)
 
 # def err1(X_c,X_true_plus_ProcNoise):
@@ -218,12 +231,12 @@ plt.legend()
 # # ================= Блок 5 ===================
 # # СБОР СТАТИСТИКИ
 
-def calc_err(X,w):
+def calc_err(X):
 
     Xn = add_process_noise(X, Q)
     X_pass, pass_id = make_pass(Xn,pd)
     Zn = do_measurement(X_pass, R, pass_id)
-    X_c = estimate(Zn,w)
+    X_c = estimate(Zn)
 
     err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
 
@@ -233,12 +246,12 @@ def calc_err(X,w):
 
 from tqdm import tqdm
 
-def calc_std_err(X,w):
+def calc_std_err(X):
     num_iterations = 1
     var_err = np.zeros((X.shape[0], X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
-        err = calc_err(X,w)
+        err = calc_err(X)
         var_err += err ** 2
 
     var_err /= num_iterations
@@ -248,22 +261,19 @@ tg2G = Target()
 tg2G.init_state(init_state2G)
 n=125
 X_true_data_not_pass_2G = make_true(tg2G,n)
-w = 0.0
-std_err_2G = calc_std_err(X_true_data_not_pass_2G,w)
+std_err_2G = calc_std_err(X_true_data_not_pass_2G)
 
 tg5G = Target()
 tg5G.init_state(init_state5G)
 n=50
 X_true_data_not_pass_5G = make_true(tg5G,n)
-w = 0.0
-std_err_5G = calc_std_err(X_true_data_not_pass_5G, w)
+std_err_5G = calc_std_err(X_true_data_not_pass_5G)
 
 tg8G = Target()
 tg8G.init_state(init_state8G)
 n=31
 X_true_data_not_pass_8G = make_true(tg8G,n)
-w = 0.0
-std_err_8G = calc_std_err(X_true_data_not_pass_8G,w)
+std_err_8G = calc_std_err(X_true_data_not_pass_8G)
 
 
 plt.figure(num="2G")

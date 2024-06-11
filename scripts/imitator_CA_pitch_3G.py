@@ -17,14 +17,12 @@ R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 
-   
 
 # =============== Блок 1 ===================
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
 init_state = {'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4}
-
 tg1.init_state(init_state)
 n = 18
 
@@ -65,22 +63,15 @@ def make_true (tg1,n):
         
 
     X_true_data_not_pass = np.array([x1,vx1,ax1,y1,vy1,ay1,z1,vz1,az1])             
-    # plt.plot(x1,y1,'b')
-    # plt.grid(True)
-    # plt.show()
+
     return (X_true_data_not_pass)
 
 
-# n = 50 # for dt = 0.25
 X_true_data_not_pass = make_true(tg1,n)
-
-# print("x_true",X_true_data_not_pass)
-
 X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
-
-
 with_pass = remove_zero_columns(X_true_data_with_pass)
 # print("with_pass",with_pass)
+
 # Создаем трехмерный scatter plot для массива
 # scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[3], z=with_pass[6], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
 # fig2.add_trace(scatter2)
@@ -161,6 +152,7 @@ Z = do_measurement (X_true_plus_ProcNoise_with_pass, R, pass_index)
 # #==================Отрисовка==================
 Z_not_pass = Z
 # print('Z=', Z)
+
 dictData = {}
 dictData['DeltaTime'] = dt
 dictData['Measurement'] = Z.tolist()
@@ -195,7 +187,7 @@ def estimate (Z):
     detection.point = meas
     detection.timePoint = dt
 
-    track = estimator.BindTrackUkf_CA(detection) #инициал. фильтра
+    track = estimator.BindTrackUkf_CA(detection) #инициал. трассы
     X_c = np.empty((9, 0))
 
     for i in range (1, Z.shape[1]):
@@ -207,7 +199,6 @@ def estimate (Z):
 
         detection.point = meas
         detection.timePoint = (i * dt) + dt
-
 
         if np.all(Z[:,i] == 0):
             X = track.step(detection.timePoint)
@@ -275,12 +266,8 @@ def calc_std_err(X):
 tg3G = Target()
 tg3G.init_state(init_state)
 
-n=18 # for dt = 1
-# n=50 # for dt = 0.25
 X_true_data_not_pass_3G = make_true(tg3G,n)
 std_err_3G = calc_std_err(X_true_data_not_pass_3G)
-
-
 
 plt.figure(num="3G")
 plt.subplot(9, 1, 1)

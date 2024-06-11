@@ -26,7 +26,7 @@ TEST_CASE("SparseMatrix")
              100,
              100;
 
-        std::cout<<Hp<<std::endl<<std::endl;
+        // std::cout<<Hp<<std::endl<<std::endl;
         Eigen::MatrixXi X0 = Hp.transpose() * A;
 
         Eigen::MatrixXi B (5,1);
@@ -35,8 +35,8 @@ TEST_CASE("SparseMatrix")
              100,
               0,
              100;
-        std::cout<<X0<<std::endl<<std::endl;
-        std::cout<<B<<std::endl<<std::endl;
+        // std::cout<<X0<<std::endl<<std::endl;
+        // std::cout<<B<<std::endl<<std::endl;
 
         CHECK(X0 == B);
         

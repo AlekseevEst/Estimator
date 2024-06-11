@@ -1,6 +1,146 @@
 #pragma once
 #include "ukf.h"
 
+template<class M,
+         template <typename> class StateModel,
+         template <typename> class MeasureModel,
+         template <typename> class ControlFunc>
+
+struct InitUKFStateModelCVMeasureModelSph
+{
+    M X0;
+    M P0;
+    M  processNoise;
+    M  measurementNoise;
+    ParamSigmaPoints p;
+    ControlFunc<M> controlFunc;
+
+    std::unique_ptr<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>> make_estimator()
+    {
+        return std::make_unique<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>>(X0, processNoise, measurementNoise, p);
+    }
+
+    void InitializationEstimator(const Detection<M>& detection)
+    {
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        // M Hp(3,6);
+        // Hp << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+
+        SpMat Hp(3,6);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+        
+        //-------------------------------------------------------------------------
+        double process_var = 0.00001;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+        double sko_Vr = 5.0;
+        p.alpha = 1e-3;
+        p.beta = 2.0;
+        p.kappa = 3.0 - X0.rows();
+        //-------------------------------------------------------------------------
+     
+        processNoise.resize(3,3);
+        processNoise <<  process_var,            0.0,          0.0,
+                                0.0,        process_var,       0.0,
+                                0.0,             0.0,      process_var;
+
+        
+        if (detection.point.rows() == 3)
+        {
+            measurementNoise.resize(3,3);
+            measurementNoise << pow(sko_range,2),          0.0,                  0.0,
+                                        0.0,         pow(sko_Az,2),              0.0,
+                                        0.0,                0.0,            pow(sko_Um,2);
+        }
+        else
+        {
+            measurementNoise.resize(4,4);
+            measurementNoise << pow(sko_range,2),          0.0,              0.0,       0.0,
+                                        0.0,         pow(sko_Az,2),          0.0,       0.0,
+                                        0.0,               0.0,         pow(sko_Um,2),  0.0,
+                                        0.0,               0.0,              0.0,    pow(sko_Vr,2);
+        }
+    }
+};
+
+template<class M,
+         template <typename> class StateModel,
+         template <typename> class MeasureModel,
+         template <typename> class ControlFunc>
+
+struct InitUKFStateModelCTMeasureModelSph
+{
+    M X0;
+    M P0;
+    M  processNoise;
+    M  measurementNoise;
+    ParamSigmaPoints p;
+    ControlFunc<M> controlFunc;
+
+    std::unique_ptr<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>> make_estimator()
+    {
+        return std::make_unique<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>>(X0, processNoise, measurementNoise, p);
+    }
+
+    void InitializationEstimator(const Detection<M>& detection)
+    {
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        // M Hp(3,7);
+        // Hp << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+
+        SpMat Hp(3,7);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+        
+        //-------------------------------------------------------------------------
+        double process_var = 10.0;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+        p.alpha = 1e-3;
+        p.beta = 2.0;
+        p.kappa = 3.0 - X0.rows();
+        //-------------------------------------------------------------------------
+     
+        processNoise.resize(4,4);
+        processNoise <<  process_var,            0.0,          0.0,     0.0,
+                                0.0,        process_var,       0.0,     0.0,
+                                0.0,             0.0,          1.0,     0.0,
+                                0.0,             0.0,          0.0,    1e-7;
+
+        
+        measurementNoise.resize(3,3);
+        measurementNoise << pow(sko_range,2),          0.0,                  0.0,
+                                    0.0,         pow(sko_Az,2),              0.0,
+                                    0.0,                0.0,            pow(sko_Um,2);
+
+    }
+};
+
 
 template<class M,
          template <typename> class StateModel,
@@ -47,7 +187,6 @@ struct InitUKFStateModelCAMeasureModelSph
         double sko_range  = 100.0;
         double sko_Az = 0.1/3.0;
         double sko_Um = 0.1/3.0;
-        // double dt = 6.0;
         p.alpha = 1e-3;
         p.beta = 2.0;
         p.kappa = 3.0 - X0.rows();
@@ -58,9 +197,6 @@ struct InitUKFStateModelCAMeasureModelSph
                                 0.0,        process_var,       0.0,
                                 0.0,             0.0,      process_var;
 
-
-        // M G = controlFunc(dt); 
-        // processNoise = G * Qp * G.transpose();
         
         measurementNoise.resize(3,3);
         measurementNoise << pow(sko_range,2),          0.0,                  0.0,
@@ -69,7 +205,6 @@ struct InitUKFStateModelCAMeasureModelSph
 
     }
 };
-
 
 template<class M, class TypeEstimator, class TypeEstimatorInit>
 struct Track
@@ -88,7 +223,7 @@ public:
     M step(const Detection<M> &detection)
     {
         try
-        {   PRINTM(timePoint);
+        {   
             double dt = detection.timePoint - timePoint;
             timePoint = detection.timePoint;
             M Xe = estimator->predict(dt);

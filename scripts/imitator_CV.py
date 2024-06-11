@@ -19,14 +19,13 @@ R_without_vr = np.diag([10000.0, (0.1/3.0)**2, (0.1/3.0)**2])
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 
-    
 # =============== Блок 1 ===================
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
 init_state = {'x':130000.0,'y':0.0,'z':0.0, 'vx':-200.0,'vy':0.0,'vz':0.0}
-
 tg1.init_state(init_state)
+n = 100 # количество измерении
 
 def remove_zero_columns(arr):
 
@@ -46,7 +45,6 @@ def make_pass(X_true_data, pd):
 
 
 def make_true (tg1): 
-    n = 100 # количество измерении
 
     x1=[];y1=[];z1=[]; vx1=[];vy1=[];vz1=[]; w=[]  
     for i in range(n):
@@ -59,8 +57,6 @@ def make_true (tg1):
         vz1.append(state1['vz'])
 
     X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1])             
-    # plt.plot(x1,y1,'b')
-    # plt.grid(True)
     return (X_true_data_not_pass)
 
 X_true_data_not_pass = make_true(tg1)
@@ -68,6 +64,7 @@ X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
 
 #==================Отрисовка======================
 with_pass = remove_zero_columns(X_true_data_with_pass)
+
 # Создаем трехмерный scatter plot для массива
 # scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[2], z=with_pass[4], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
 # fig2.add_trace(scatter2)
@@ -102,11 +99,6 @@ X_true_plus_ProcNoise_with_pass = add_process_noise(X_true_data_with_pass, Q) # 
 
 def Zsph2cart(Z):
     
-    # x = Z[0] * np.cos(Z[1]) * np.cos(Z[2])
-    # y = Z[0] * np.sin(Z[1]) * np.cos(Z[2])
-    # z = Z[0] * np.sin(Z[2])
-    # Z_cart = np.vstack((x,y,z))
-    # return Z_cart
     x = Z[0] * np.cos(np.deg2rad(Z[1])) * np.cos(np.deg2rad(Z[2]))
     y = Z[0] * np.sin(np.deg2rad(Z[1])) * np.cos(np.deg2rad(Z[2]))
     z = Z[0] * np.sin(np.deg2rad(Z[2]))
@@ -142,51 +134,86 @@ Z, Zvr = do_measurement (X_true_plus_ProcNoise_with_pass, R_with_vr, pass_index)
 
 Ztmp = remove_zero_columns(Z)
 Zc = Zsph2cart(Ztmp)
+# print ("Zc",Zc)
 
-print ("Zc",Zc)
 # ================= Блок 4 ===================
 def estimate (Z):
 
-    Z_cart = Zsph2cart(Z)
-    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
-    # print ("X0", X0)
+    detection = estimator.Detection()
 
-    point = estimator.Points()
-    point.alpha = 1e-3
-    point.beta = 2
-    point.kappa = 3 - X0.shape[0]
-
-    ukf = estimator.BindTrackUkf_CV(X0,Qp,R_without_vr,point) #инициал. фильтра
+    r_meas = Z[0,0]
+    az_meas = Z[1,0] 
+    um_meas = Z[2,0] 
     
-    X_c = np.empty((len(X0), 0))
-    for i in range (Z.shape[1]-1):
-        if np.all(Z[:,i+1] == 0):
-            X = ukf.step(dt)
+    meas = np.array([[r_meas],[az_meas],[um_meas]])
+
+    detection.point = meas
+    detection.timePoint = dt
+
+    track = estimator.BindTrackUkf_CV(detection) #инициал. трассы
+    X_c = np.empty((6, 0))
+
+    for i in range (1, Z.shape[1]):
+
+        r_meas = Z[0,i]
+        az_meas = Z[1,i]
+        um_meas = Z[2,i]
+        meas = ([[r_meas],[az_meas],[um_meas]])
+
+        detection.point = meas
+        detection.timePoint = (i * dt) + dt
+
+        if np.all(Z[:,i] == 0):
+            X = track.step(detection.timePoint)
             X_c = np.append(X_c,X,axis=1)
             continue
-        X = ukf.step(dt, Z[:,i+1])
+        # print('Z=',Z[:,i])
+        X = track.step(detection)
+        # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
+    # print("X_Estimeted=",X_c)
+        
     return X_c 
 
 def estimate_with_vr (Zvr):
 
-    Z_cart = Zsph2cart(Zvr)
-    X0 = np.vstack([Z_cart[0,0], 0., Z_cart[1,0], 0., Z_cart[2,0], 0.]) # инициализируем вектор состояния, равный первому измерению
-    # print ("X0", X0)
-    point = estimator.Points()
-    point.alpha = 1e-3
-    point.beta = 2
-    point.kappa = 3 - X0.shape[0]
-    ukf = estimator.BindTrackUkf_CV(X0,Qp,R_with_vr,point) #инициал. фильтра
+    detection = estimator.Detection()
+
+    r_meas = Zvr[0,0]
+    az_meas = Zvr[1,0] 
+    um_meas = Zvr[2,0] 
+    Vr_meas = Zvr[3,0]
     
-    X_c = np.empty((len(X0), 0))
-    for i in range (Zvr.shape[1]-1):
-        if np.all(Zvr[:,i+1] == 0):
-            X = ukf.step(dt)
+    meas = np.array([[r_meas],[az_meas],[um_meas],[Vr_meas]])
+
+    detection.point = meas
+    detection.timePoint = dt
+
+    track = estimator.BindTrackUkf_CV(detection) #инициал. трассы
+    X_c = np.empty((6, 0))
+
+    for i in range (1, Zvr.shape[1]):
+
+        r_meas = Zvr[0,i]
+        az_meas = Zvr[1,i]
+        um_meas = Zvr[2,i]
+        Vr_meas = Zvr[3,i]
+        meas = ([[r_meas],[az_meas],[um_meas], [Vr_meas]])
+
+        detection.point = meas
+        detection.timePoint = (i * dt) + dt
+
+
+        if np.all(Zvr[:,i] == 0):
+            X = track.step(detection.timePoint)
             X_c = np.append(X_c,X,axis=1)
             continue
-        X = ukf.step(dt, Zvr[:,i+1])
+        # print('Zvr=',Zvr[:,i])
+        X = track.step(detection)
+        # print('X=',X)
         X_c = np.append(X_c,X,axis=1)
+    # print("X_Estimeted=",X_c)
+        
     return X_c 
 
 
@@ -194,12 +221,13 @@ X_c = estimate(Z)
 X_c_with_Vr = estimate_with_vr(Zvr)
 # print ("X_c",X_c)
 # print ("X_c_with_Vr",X_c_with_Vr)
-def err1(X_c,X_true_plus_ProcNoise):
 
-    er = X_c[:,:] - X_true_plus_ProcNoise [:,1:]
-    return er
+# def err1(X_c,X_true_plus_ProcNoise):
 
-e = err1(X_c, X_true_plus_ProcNoise)
+#     er = X_c[:,:] - X_true_plus_ProcNoise [:,1:]
+#     return er
+
+# e = err1(X_c, X_true_plus_ProcNoise)
 # print("e =", e[0]) #Распечатка ошибок по Х одной трассы
 
 

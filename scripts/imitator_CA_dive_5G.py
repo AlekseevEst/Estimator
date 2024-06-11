@@ -17,15 +17,12 @@ R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg
 plt.rcParams['figure.figsize'] = [10, 6]
 fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
 
-   
-
 # =============== Блок 1 ===================
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
 init_state = {'x':10000.0, 'y':0.0, 'z':20000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': -49.0} 
 tg1.init_state(init_state)
-
 n = 18
 
 def remove_zero_columns(arr):
@@ -69,14 +66,10 @@ def make_true (tg1,n):
     return (X_true_data_not_pass)
 
 X_true_data_not_pass = make_true(tg1,n)
-
-# print("x_true",X_true_data_not_pass)
-
 X_true_data_with_pass, pass_index = make_pass(X_true_data_not_pass, pd)
-
-
 with_pass = remove_zero_columns(X_true_data_with_pass)
 # print("with_pass",with_pass)
+
 # Создаем трехмерный scatter plot для массива
 # scatter2 = go.Scatter3d(x=with_pass[0], y=with_pass[3], z=with_pass[6], mode='markers+lines', marker=dict(size=3, color='blue'), name='X_true_data')
 # fig2.add_trace(scatter2)
@@ -158,6 +151,7 @@ Z = do_measurement (X_true_plus_ProcNoise_with_pass, R, pass_index)
 # #==================Отрисовка==================
 Z_not_pass = Z
 # print('Z=', Z)
+
 dictData = {}
 dictData['DeltaTime'] = dt
 dictData['Measurement'] = Z.tolist()
@@ -180,7 +174,7 @@ plt.legend()
 # # ================= Блок 4 ===================
 
 def estimate (Z):
-    # meas = estimator.Measurement()
+
     detection = estimator.Detection()
 
     r_meas = Z[0,0]
@@ -192,7 +186,7 @@ def estimate (Z):
     detection.point = meas
     detection.timePoint = dt
 
-    track = estimator.BindTrackUkf_CA(detection) #инициал. фильтра
+    track = estimator.BindTrackUkf_CA(detection) #инициал. трассы
     X_c = np.empty((9, 0))
 
     for i in range (1, Z.shape[1]):
@@ -204,7 +198,6 @@ def estimate (Z):
 
         detection.point = meas
         detection.timePoint = (i * dt) + dt
-
 
         if np.all(Z[:,i] == 0):
             X = track.step(detection.timePoint)
