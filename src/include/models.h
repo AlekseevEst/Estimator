@@ -186,3 +186,52 @@ struct FuncMeasSphCA
     }
 };
 
+template <class M>
+struct FuncControlMatrix_XvXYvYZvZ
+{
+    M operator()(double T)
+    {
+        M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
+        G << (T * T) / 2.0,          0.0,            0.0,
+                    T,               0.0,            0.0,
+                   0.0,         (T * T) / 2.0,       0.0,
+                   0.0,               T,             0.0,
+                   0.0,              0.0,       (T * T) / 2.0,
+                   0.0,              0.0,             T;
+        return G;
+    }
+};
+template <class M>
+struct FuncControlMatrix_XvXYvYZvZW
+{
+    M operator()(double T)
+    {
+        M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
+        G << (T * T) / 2.0,    0.0,               0.0,          0.0,
+                T,             0.0,               0.0,          0.0,
+                0.0,      (T * T) / 2.0,          0.0,          0.0,
+                0.0,            T,                0.0,          0.0,
+                0.0,           0.0,          (T * T) / 2.0,     0.0,
+                0.0,           0.0,                T,           0.0,
+                0.0,           0.0,               0.0,          1.0;
+            return G;
+    }
+};
+template <class M>
+struct FuncControlMatrix_XvXaXYvYaYZvZaZ
+{
+    M operator()(double T)
+    {
+        M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
+        G << (T * T) / 2.0,    0.0,               0.0,
+                 T,            0.0,               0.0,
+                1.0,           0.0,               0.0,         
+                0.0,      (T * T) / 2.0,          0.0,         
+                0.0,            T,                0.0,
+                0.0,           1.0,               0.0,         
+                0.0,           0.0,          (T * T) / 2.0,    
+                0.0,           0.0,                T,          
+                0.0,           0.0,               1.0;
+        return G;
+    }
+};

@@ -19,7 +19,11 @@ public:
     // static M RsphRad2RsphDeg(const M &R);
     static double ComputeAngleDifference(double angle1, double angle2);
     static M sqrtMat(const M& P);
+    static M sqrtMatSpectral(const M& P);
     static bool CheckingConditionsMat(const M& P);
+    static M sph2CartMeas(const M& Z);
+    static double deg2rad(double val);
+    static bool isPositiveDefinite(const M& matrix);
 
 private:
 };
@@ -65,12 +69,19 @@ enum class CoordPositionMat
     VZ_CA = 7
 };
 
-enum class SphPos{
+enum class SphPosMeas{
 
     POS_RANGE = 0,
     POS_AZIM,
     POS_ELEV, 
     POS_VR
+    
+};
+enum class CartPosMeas{
+
+    POS_X = 0,
+    POS_Y,
+    POS_Z
     
 };
 
@@ -193,62 +204,68 @@ M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
     return P;
 }
 
-template <class M>
-M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
-{
-    if (size == ENUM_TO_INT(SizeMat::ROW6))
-    {
-        M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
-        G << (T * T) / 2.0,          0.0,            0.0,
-                    T,               0.0,            0.0,
-                   0.0,         (T * T) / 2.0,       0.0,
-                   0.0,               T,             0.0,
-                   0.0,              0.0,       (T * T) / 2.0,
-                   0.0,              0.0,             T;
-        M Qp = G * Q * G.transpose();
-        return Qp;
-    }
-    if (size == ENUM_TO_INT(SizeMat::ROW7))
-    {
-    M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
-    G << (T * T) / 2.0,      0.0,               0.0,          0.0,
-               T,            0.0,               0.0,          0.0,
-              0.0,      (T * T) / 2.0,          0.0,          0.0,
-              0.0,            T,                0.0,          0.0,
-              0.0,           0.0,          (T * T) / 2.0,     0.0,
-              0.0,           0.0,                T,           0.0,
-              0.0,           0.0,               0.0,          1.0;
+// template <class M>
+// M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
+// {
+//     if (size == ENUM_TO_INT(SizeMat::ROW6))
+//     {
+//         M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
+//         G << (T * T) / 2.0,          0.0,            0.0,
+//                     T,               0.0,            0.0,
+//                    0.0,         (T * T) / 2.0,       0.0,
+//                    0.0,               T,             0.0,
+//                    0.0,              0.0,       (T * T) / 2.0,
+//                    0.0,              0.0,             T;
+//         M Qp = G * Q * G.transpose();
+//         return Qp;
+//     }
+//     if (size == ENUM_TO_INT(SizeMat::ROW7))
+//     {
+//     M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
+//     G << (T * T) / 2.0,      0.0,               0.0,          0.0,
+//                T,            0.0,               0.0,          0.0,
+//               0.0,      (T * T) / 2.0,          0.0,          0.0,
+//               0.0,            T,                0.0,          0.0,
+//               0.0,           0.0,          (T * T) / 2.0,     0.0,
+//               0.0,           0.0,                T,           0.0,
+//               0.0,           0.0,               0.0,          1.0;
 
-    M Qp = G * Q * G.transpose();
-    return Qp;
-    }
+//     M Qp = G * Q * G.transpose();
+//     return Qp;
+//     }
 
-    M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
-    G << (T * T) / 2.0,      0.0,               0.0,
-               T,            0.0,               0.0,
-              1.0,           0.0,               0.0,         
-              0.0,      (T * T) / 2.0,          0.0,         
-              0.0,            T,                0.0,
-              0.0,           1.0,               0.0,         
-              0.0,           0.0,          (T * T) / 2.0,    
-              0.0,           0.0,                T,          
-              0.0,           0.0,               1.0;
+//     M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
+//     G << (T * T) / 2.0,      0.0,               0.0,
+//                T,            0.0,               0.0,
+//               1.0,           0.0,               0.0,         
+//               0.0,      (T * T) / 2.0,          0.0,         
+//               0.0,            T,                0.0,
+//               0.0,           1.0,               0.0,         
+//               0.0,           0.0,          (T * T) / 2.0,    
+//               0.0,           0.0,                T,          
+//               0.0,           0.0,               1.0;
 
-    M Qp = G * Q * G.transpose();
-    // PRINTM(Qp);
-    return Qp;
-}
+//     M Qp = G * Q * G.transpose();
+//     // PRINTM(Qp);
+//     return Qp;
+// }
 
 template <class M>
 Measurement Utils<M>::make_Z0(const M &X)
 {
     Measurement MeasZ0;
-    MeasZ0.r_meas = sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2) + pow(X(4, 0), 2));
-    MeasZ0.az_meas = atan2(X(2, 0), X(0, 0)) * (180 / M_PI);
-    MeasZ0.um_meas = atan2(X(4, 0), sqrt(pow(X(0, 0), 2) + pow(X(2, 0), 2))) * (180 / M_PI);
+    if (X.rows() == ENUM_TO_INT(SizeMat::ROW9))
+    {
+        MeasZ0.r_meas = sqrt(pow(X(ENUM_TO_INT(CoordPositionMat::X_CA), 0), 2) + pow(X(ENUM_TO_INT(CoordPositionMat::Y_CA), 0), 2) + pow(X(ENUM_TO_INT(CoordPositionMat::Z_CA), 0), 2));
+        MeasZ0.az_meas = atan2(X(ENUM_TO_INT(CoordPositionMat::Y_CA), 0), X(ENUM_TO_INT(CoordPositionMat::X_CA), 0)) * (180 / M_PI);
+        MeasZ0.um_meas = atan2(X(ENUM_TO_INT(CoordPositionMat::Z_CA), 0), sqrt(pow(X(ENUM_TO_INT(CoordPositionMat::X_CA), 0), 2) + pow(X(ENUM_TO_INT(CoordPositionMat::Y_CA), 0), 2))) * (180 / M_PI);
+        return MeasZ0;
+    }
+    MeasZ0.r_meas = sqrt(pow(X(ENUM_TO_INT(CoordPositionMat::X), 0), 2) + pow(X(ENUM_TO_INT(CoordPositionMat::Y), 0), 2) + pow(X(ENUM_TO_INT(CoordPositionMat::Z), 0), 2));
+    MeasZ0.az_meas = atan2(X(ENUM_TO_INT(CoordPositionMat::Y), 0), X(ENUM_TO_INT(CoordPositionMat::X), 0)) * (180 / M_PI);
+    MeasZ0.um_meas = atan2(X(ENUM_TO_INT(CoordPositionMat::Z), 0), sqrt(pow(X(ENUM_TO_INT(CoordPositionMat::X), 0), 2) + pow(X(ENUM_TO_INT(CoordPositionMat::Y), 0), 2))) * (180 / M_PI);
     return MeasZ0;
 }
-
 
 // template <class M>
 // M Utils<M>::RsphRad2RsphDeg(const M &R)
@@ -288,11 +305,64 @@ double Utils<M>::ComputeAngleDifference(double angle1, double angle2)
 template <class M>
 bool Utils<M>::CheckingConditionsMat(const M &P)
 {
-    if ((P.transpose().isApprox(P, 1e-8)) && (P.llt().info() == Eigen::Success) && (P.determinant() != 0))
-        return true;
-    else
+    // PRINTM(P);
+    if ((P.transpose().isApprox(P, 1e-8)))
+        {
+            if (isPositiveDefinite(P))
+            {
+                if (P.determinant() != 0)
+                {
+                    return true;
+                }
+                std::cout<< " Вырожденная матрица"<< std::endl;
+                PRINTM(P);
+                return false;
+            }
+            std::cout<< " Матрица Не полож. определенная"<< std::endl;
+            PRINTM(P);
+            return false;
+        }
+        std::cout<< " Не симметричная матрица"<< std::endl;
+        PRINTM(P);
         return false;
+
 }
+
+template <class M>
+bool Utils<M>::isPositiveDefinite(const M &matrix) {
+    using namespace Eigen;
+    Eigen::SelfAdjointEigenSolver<M> eigenSolver(matrix);
+    if (eigenSolver.info() != Eigen::Success) {
+        std::cout<<"eigenSolver error";
+        return false;
+    }
+
+    // Check if all the eigenvalues are positive
+    VectorXd eigenvalues = eigenSolver.eigenvalues();
+    PRINTM(eigenvalues);
+    for (int i = 0; i < eigenvalues.size(); ++i) {
+        std::cout<<eigenvalues[i]<< std::endl;
+        if (eigenvalues[i] < 0) {
+            std::cout<<"eigenvalues отрицательное.";
+            return false;
+        }
+    }
+    return true;
+}
+
+
+// template <class M>
+// bool Utils<M>::CheckingConditionsMat(const M &P)
+// {
+//     if ((P.transpose().isApprox(P, 1e-8)) && (P.llt().info() == Eigen::Success) && (P.determinant() != 0))
+//         return true;
+//     else
+//         return false;
+// }
+
+
+
+
 template <class M>
 M Utils<M>::sqrtMat(const M& P)
 {
@@ -305,3 +375,49 @@ M Utils<M>::sqrtMat(const M& P)
     return L;
 }
 
+template <class M>
+M Utils<M>::sqrtMatSpectral(const M& P)
+{
+    // PRINTM (P);
+    Eigen::SelfAdjointEigenSolver<M> eigensolver(P);
+    if (eigensolver.info() != Eigen::Success)
+    {
+        throw std::runtime_error("Eigen decomposition ERROR");
+    }
+
+    M lambda = eigensolver.eigenvalues().asDiagonal();
+    // PRINTM (lambda);
+    M V = eigensolver.eigenvectors();
+
+    for (int i = 0; i < lambda.rows(); ++i)
+    {
+
+        if (lambda(i, i) > 0)
+        {
+            lambda(i, i) = std::sqrt(lambda(i, i));
+        }
+        else
+        {
+            lambda(i, i) = 0; // Если собственное значение нулевое, оставляем его нулевым
+        }
+    }
+
+    return V * lambda;
+}
+
+
+template<class M>
+double Utils<M>::deg2rad(double val)
+{
+    return val * (M_PI/180.0);
+}
+
+template <class M>
+M Utils<M>::sph2CartMeas(const M& Z)
+{
+    M cartMeas(ENUM_TO_INT(SizeMat::COL3),ENUM_TO_INT(SizeMat::COL1));
+    cartMeas(ENUM_TO_INT(CartPosMeas::POS_X),0) = Z(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0) * cos(deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_AZIM),0))) * cos(Utils<M>::deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0)));
+    cartMeas(ENUM_TO_INT(CartPosMeas::POS_Y),0) = Z(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0) * sin(deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_AZIM),0))) * cos(Utils<M>::deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0)));
+    cartMeas(ENUM_TO_INT(CartPosMeas::POS_Z),0) = Z(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0) * sin(deg2rad(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0)));
+    return cartMeas;
+}

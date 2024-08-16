@@ -5,7 +5,9 @@ struct Predict
 {
     M Xe;
     M Pe;
+    M Pzz;
     M Se;
+    M v; 
 
     M Ze;
     M K;
@@ -23,9 +25,17 @@ struct Measurement
     double az_meas;
     double um_meas;
 };
-struct Points
+struct ParamSigmaPoints
 {
     double alpha;
     double beta;
     double kappa;
+};
+
+template<class M>
+struct Detection
+{
+    double timePoint;
+    M point;
+    //M SKO_measurement;
 };

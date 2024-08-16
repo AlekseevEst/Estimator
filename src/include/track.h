@@ -1,20 +1,314 @@
 #pragma once
-#include "utils.h"
+#include "ukf.h"
+#include "imm.h"
 
-template <class M, class TypeEstimator/*, class TypeDetection*/>
+template<class M,
+         template <typename> class StateModel,
+         template <typename> class MeasureModel,
+         template <typename> class ControlFunc>
+
+struct InitUKFStateModelCVMeasureModelSph
+{
+    M X0;
+    M P0;
+    M  processNoise;
+    M  measurementNoise;
+    ParamSigmaPoints p;
+    ControlFunc<M> controlFunc;
+
+    std::unique_ptr<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>> make_estimator()
+    {
+        return std::make_unique<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>>(X0, processNoise, measurementNoise, p); // создание IMM
+    }
+
+    void InitializationEstimator(const Detection<M>& detection)
+    {
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        // M Hp(3,6);
+        // Hp << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+
+        SpMat Hp(3,6);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+        
+        //-------------------------------------------------------------------------
+        double process_var = 0.00001;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+        double sko_Vr = 5.0;
+        p.alpha = 1e-3;
+        p.beta = 2.0;
+        p.kappa = 3.0 - X0.rows();
+        //-------------------------------------------------------------------------
+     
+        processNoise.resize(3,3);
+        processNoise <<  process_var,            0.0,          0.0,
+                                0.0,        process_var,       0.0,
+                                0.0,             0.0,      process_var;
+
+        
+        if (detection.point.rows() == 3)
+        {
+            measurementNoise.resize(3,3);
+            measurementNoise << pow(sko_range,2),          0.0,                  0.0,
+                                        0.0,         pow(sko_Az,2),              0.0,
+                                        0.0,                0.0,            pow(sko_Um,2);
+        }
+        else
+        {
+            measurementNoise.resize(4,4);
+            measurementNoise << pow(sko_range,2),          0.0,              0.0,          0.0,
+                                        0.0,         pow(sko_Az,2),          0.0,          0.0,
+                                        0.0,               0.0,         pow(sko_Um,2),     0.0,
+                                        0.0,               0.0,              0.0,        pow(sko_Vr,2);
+        }
+
+        // P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measurementNoise, detection.point(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0)   // протестить
+        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_AZIM), 0)
+        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_ELEV), 0)),X0.rows());
+    }
+};
+
+template<class M,
+         template <typename> class StateModel,
+         template <typename> class MeasureModel,
+         template <typename> class ControlFunc>
+
+struct InitUKFStateModelCTMeasureModelSph
+{
+    M X0;
+    M P0;
+    M  processNoise;
+    M  measurementNoise;
+    ParamSigmaPoints p;
+    ControlFunc<M> controlFunc;
+
+    std::unique_ptr<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>> make_estimator()
+    {
+        return std::make_unique<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>>(X0, processNoise, measurementNoise, p);
+    }
+
+    void InitializationEstimator(const Detection<M>& detection)
+    {
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        // M Hp(3,7);
+        // Hp << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        //       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0;
+
+        SpMat Hp(3,7);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+        
+        //-------------------------------------------------------------------------
+        double process_var = 10.0;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+        p.alpha = 1e-3;
+        p.beta = 2.0;
+        p.kappa = 3.0 - X0.rows();
+        //-------------------------------------------------------------------------
+     
+        processNoise.resize(4,4);
+        processNoise <<  process_var,            0.0,          0.0,     0.0,
+                                0.0,        process_var,       0.0,     0.0,
+                                0.0,             0.0,          1.0,     0.0,
+                                0.0,             0.0,          0.0,    1e-7;
+
+        
+        measurementNoise.resize(3,3);
+        measurementNoise << pow(sko_range,2),          0.0,                  0.0,
+                                    0.0,         pow(sko_Az,2),              0.0,
+                                    0.0,                0.0,            pow(sko_Um,2);
+
+        // P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measurementNoise, detection.point(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0)
+        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_AZIM), 0)
+        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_ELEV), 0)),X0.rows());
+
+    }
+};
+
+
+template<class M,
+         template <typename> class StateModel,
+         template <typename> class MeasureModel,
+         template <typename> class ControlFunc>
+
+struct InitUKFStateModelCAMeasureModelSph
+{
+    M X0;
+    M P0;
+    M  processNoise;
+    M  measurementNoise;
+    ParamSigmaPoints p;
+    ControlFunc<M> controlFunc;
+
+    std::unique_ptr<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>> make_estimator()
+    {
+        return std::make_unique<UnscentedKalmanfilter<M, StateModel, MeasureModel, ControlFunc>>(X0, processNoise, measurementNoise, p);
+    }
+
+    void InitializationEstimator(const Detection<M>& detection)
+    {
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+
+        SpMat Hp(3,9);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 3, 1.0));
+        tripletList.push_back(T(2, 6, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+
+        
+        //-------------------------------------------------------------------------
+        double process_var = 10.0;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+        p.alpha = 1e-3;
+        p.beta = 2.0;
+        p.kappa = 3.0 - X0.rows();
+        //-------------------------------------------------------------------------
+     
+        processNoise.resize(3,3);
+        processNoise <<  process_var,            0.0,          0.0,
+                                0.0,        process_var,       0.0,
+                                0.0,             0.0,      process_var;
+
+        
+        measurementNoise.resize(3,3);
+        measurementNoise << pow(sko_range,2),          0.0,                  0.0,
+                                    0.0,         pow(sko_Az,2),              0.0,
+                                    0.0,                0.0,            pow(sko_Um,2);
+
+
+                
+        // P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measurementNoise, detection.point(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0)
+        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_AZIM), 0)
+        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_ELEV), 0)),X0.rows());
+    }
+};
+
+
+template<class M,
+         template <typename> class ConteinerType>        
+struct InitUkfImmCVCTCAMeasureModelSph
+{
+    M X0;
+    M P0;
+    M  processNoise;
+    M  measurementNoise;
+    M  mu_i;
+    M  p_ij;
+    ParamSigmaPoints p;
+
+    std::unique_ptr<Imm<M, ConteinerType>> make_estimator()
+    {
+        return std::make_unique<Imm<M, ConteinerType>>(mu_i, p_ij, X0, processNoise, measurementNoise, p);
+    }
+
+    void InitializationEstimator(const Detection<M>& detection)
+    {
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        SpMat Hp(3,6);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+
+        
+        //-------------------------------------------------------------------------
+        double process_var = 10.0;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+        p.alpha = 1e-3;
+        p.beta = 2.0;
+        p.kappa = 3.0 - X0.rows();
+        //-------------------------------------------------------------------------
+     
+        processNoise.resize(3,3);
+        processNoise <<  process_var,            0.0,          0.0,
+                                0.0,        process_var,       0.0,
+                                0.0,             0.0,      process_var;
+
+        
+        measurementNoise.resize(3,3);
+        measurementNoise << pow(sko_range,2),          0.0,                  0.0,
+                                    0.0,         pow(sko_Az,2),              0.0,
+                                    0.0,                0.0,            pow(sko_Um,2);
+
+        mu_i.resize(1,3);                            
+        mu_i << 1.0/3.0, 1.0/3.0, 1.0/3.0;
+
+        p_ij.resize(3,3);                            
+        p_ij << 0.97, 0.015, 0.015,
+                0.015, 0.97, 0.015,
+                0.015, 0.015, 0.97;
+                                                                        
+    }
+
+};
+
+
+template<class M, class TypeEstimator, class TypeEstimatorInit>
 struct Track
 {
-
-    Track(const M &X, const M &procNoise, const M &measNoiseMatRadian, Points points) : estimator(X, procNoise, measNoiseMatRadian, points) {}
-
-    M Step(double dt, const M &meas)
+private:
+    std::unique_ptr<TypeEstimator> estimator;
+    double timePoint;
+public:
+    Track(const Detection<M>& detection)
+    {
+        TypeEstimatorInit estimatorInit;
+        estimatorInit.InitializationEstimator(detection);
+        estimator = estimatorInit.make_estimator();
+        timePoint = detection.timePoint;
+    }
+    M step(const Detection<M> &detection)
     {
         try
-        {
-            M xe = estimator.predict(dt);
-            M x = estimator.correct(meas);
-
-            return x;
+        {   
+            double dt = detection.timePoint - timePoint;
+            timePoint = detection.timePoint;
+            M Xe = estimator->predict(dt);
+            M X = estimator->correct(detection.point);
+            return X;
         }
         catch (const std::runtime_error &e)
         {
@@ -22,24 +316,72 @@ struct Track
             return M();
         }
     }
-
-    M Step(double dt)
+    
+    M step(double t)
     {
-
         try
         {
-            estimator.correctStruct.X = estimator.predict(dt);
-            estimator.correctStruct.P = estimator.predictStruct.Pe;
-            return estimator.correctStruct.X;
+        double dt = t - timePoint;
+        timePoint = t;
+        estimator->correctStruct.X = estimator->predict(dt);
+        estimator->correctStruct.P = estimator->predictStruct.Pe;
+        return estimator->correctStruct.X;
         }
-
-        catch (const std::exception &e)
+                catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
-            return M(); 
+            return M();
         }
     }
+};
 
+
+
+template<class M, class TypeEstimator, class TypeEstimatorInit>
+struct TrackImm
+{
 private:
-    TypeEstimator estimator;
+    
+    double timePoint;
+public:
+    std::unique_ptr<TypeEstimator> estimator;
+    TrackImm(const Detection<M>& detection)
+    {
+        TypeEstimatorInit estimatorInit;
+        estimatorInit.InitializationEstimator(detection);
+        estimator = estimatorInit.make_estimator();
+        timePoint = detection.timePoint;
+    }
+    M step(const Detection<M> &detection)
+    {
+        try
+        {   
+            double dt = detection.timePoint - timePoint;
+            timePoint = detection.timePoint;
+            M X = estimator->step(detection.point,dt);
+            return X;
+        }
+        catch (const std::runtime_error &e)
+        {
+            std::cerr << e.what() << '\n';
+            return M();
+        }
+    }
+    
+    M step(double t)
+    {
+        // try
+        // {
+        // double dt = t - timePoint;
+        // timePoint = t;
+        // estimator->correctStruct.X = estimator->predict(dt);
+        // estimator->correctStruct.P = estimator->predictStruct.Pe;
+        // return estimator->correctStruct.X;
+        // }
+        //         catch (const std::exception &e)
+        // {
+        //     std::cerr << e.what() << '\n';
+        //     return M();
+        // }
+    }
 };

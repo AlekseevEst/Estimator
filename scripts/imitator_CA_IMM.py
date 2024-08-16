@@ -22,9 +22,9 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-init_state = {'x':50000.0, 'y':0.0, 'z':0.0, 'vx':-1000.0, 'vy':0.0, 'vz':0.0, 'ax': 30.0, 'ay': 0.0, 'az': 0.0}
+init_state = {'x':90000.0, 'y':0.0, 'z':0.0, 'vx':-1000.0, 'vy':0.0, 'vz':0.0, 'ax': 50.0, 'ay': 0.0, 'az': 0.0}
 tg1.init_state(init_state)
-n = 18
+n = 30
 
 def remove_zero_columns(arr):
 
@@ -62,7 +62,7 @@ def make_true (tg1,n):
         az1.append(state1['az'])
         
 
-    X_true_data_not_pass = np.array([x1,vx1,ax1,y1,vy1,ay1,z1,vz1,az1])             
+    X_true_data_not_pass = np.array([x1,vx1,ax1, y1,vy1,ay1,z1,vz1, az1])             
 
     return (X_true_data_not_pass)
 
@@ -175,7 +175,7 @@ plt.legend()
 # # ================= Блок 4 ===================
 
 def estimate (Z):
-    # meas = estimator.Measurement()
+
     detection = estimator.Detection()
 
     r_meas = Z[0,0]
@@ -186,12 +186,15 @@ def estimate (Z):
 
     detection.point = meas
     detection.timePoint = dt
-
-    track = estimator.BindTrackUkf_CA(detection) #инициал. трассы
-    X_c = np.empty((9, 0))
+   
+    track = estimator.BindTrackUkfImm(detection) #инициал. трассы
+    
+    X_c = np.empty((6, 0))
+    m_i = np.empty((0, 3))
 
     for i in range (1, Z.shape[1]):
 
+        m_i = np.append(m_i, track.get_m_i(), axis=0)
         r_meas = Z[0,i]
         az_meas = Z[1,i]
         um_meas = Z[2,i]
@@ -199,20 +202,27 @@ def estimate (Z):
 
         detection.point = meas
         detection.timePoint = (i * dt) + dt
-
+        
         if np.all(Z[:,i] == 0):
             X = track.step(detection.timePoint)
             X_c = np.append(X_c,X,axis=1)
             continue
-        # print('Z=',Z[:,i])
-        X = track.step(detection)
-        # print('X=',X)
-        X_c = np.append(X_c,X,axis=1)
-    # print("X_Estimeted=",X_c)
-        
-    return X_c 
+        print('Z=',Zsph2cart(Z[:,i]))
 
-X_c = estimate(Z)
+        X = track.step(detection)
+
+        print('X=',X)
+        
+        
+        X_c = np.append(X_c,X,axis=1)
+        # print('Xc=',X_c)
+    print("X_Estimeted=",X_c)
+    print ('m_i=',m_i)
+        
+    return X_c, m_i 
+
+X_c, m_i = estimate(Z)
+
 # print("X_Estimeted=",X_c)
 
 # def err1(X_c,X_true_plus_ProcNoise):
@@ -227,11 +237,16 @@ X_c = estimate(Z)
 # #==================Отрисовка==================
 # Z_cart = Zsph2cart(Z)
 plt.figure()
-plt.plot(X_c[0], X_c[6], label='Correct', marker='o')
-plt.plot(X_true_plus_ProcNoise[0],X_true_plus_ProcNoise[6], label='truth', marker='x')
-plt.plot(Zc[0], Zc[2], label='Meas',marker='o')
+plt.plot(X_c[0], X_c[2], label='Correct', marker='o')
+plt.plot(X_true_plus_ProcNoise[0],X_true_plus_ProcNoise[3], label='truth', marker='x')
+plt.plot(Zc[0], Zc[1], label='Meas',marker='o')
 plt.legend()
 
+plt.figure()
+plt.plot((np.arange(len(m_i[:, 0]))+1)*dt, m_i[:,0], label='m_i_CV', marker='o')
+plt.plot((np.arange(len(m_i[:, 0]))+1)*dt,m_i[:,1], label='m_i_CT', marker='x')
+plt.plot((np.arange(len(m_i[:, 0]))+1)*dt, m_i[:,2], label='m_i_CA',marker='o')
+plt.legend()
 
 # # # ================= Блок 5 ===================
 # # СБОР СТАТИСТИКИ
@@ -240,7 +255,11 @@ def calc_err(X):
     Xn = add_process_noise(X, Q)
     X_pass, pass_id = make_pass(Xn,pd)
     Zn = do_measurement(X_pass, R, pass_id)
-    X_c = estimate(Zn)
+    X_c, m_i = estimate(Zn)
+
+    Xn = np.delete(Xn,2, axis=0)    # удаляем строки с ускорением
+    Xn = np.delete(Xn,4, axis=0)
+    Xn = np.delete(Xn,6, axis=0) 
 
     err = X_c[:,:] - Xn [:,1:] # ошибка вычисляется со второго столбца.
 
@@ -251,8 +270,8 @@ def calc_err(X):
 from tqdm import tqdm
 
 def calc_std_err(X):
-    num_iterations = 100
-    var_err = np.zeros((X.shape[0], X.shape[1]-1))
+    num_iterations = 1
+    var_err = np.zeros((X.shape[0]- 3, X.shape[1]-1))
 
     for i in tqdm(range(num_iterations)):
         err = calc_err(X)
@@ -269,58 +288,41 @@ std_err_3G = calc_std_err(X_true_data_not_pass_3G)
 
 
 plt.figure(num="3G")
-plt.subplot(9, 1, 1)
+plt.subplot(6, 1, 1)
 plt.plot((np.arange(len(std_err_3G[0, :])))*dt, std_err_3G[0, :])
 plt.xlabel('Time,s')
 plt.ylabel('std_x, met')
 plt.grid(True)
-plt.subplot(9, 1, 2)
+plt.subplot(6, 1, 2)
 plt.plot((np.arange(len(std_err_3G[1, :])))*dt, std_err_3G[1,:])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vx, m/s')
 
-plt.subplot(9, 1, 3)
-plt.plot((np.arange(len(std_err_3G[2, :])))*dt, std_err_3G[2, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_ax, m/s^2')
 
-plt.subplot(9, 1, 4)
-plt.plot((np.arange(len(std_err_3G[3, :])))*dt, std_err_3G[3, :])
+plt.subplot(6, 1, 3)
+plt.plot((np.arange(len(std_err_3G[2, :])))*dt, std_err_3G[2, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_y, met')
 
-plt.subplot(9, 1, 5)
-plt.plot((np.arange(len(std_err_3G[4,:])))*dt, std_err_3G[4, :])
+plt.subplot(6, 1, 4)
+plt.plot((np.arange(len(std_err_3G[3,:])))*dt, std_err_3G[3, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vy, m/s')
 
-plt.subplot(9, 1, 6)
-plt.plot((np.arange(len(std_err_3G[5, :])))*dt, std_err_3G[5, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_ay, m/s^2')
-
-plt.subplot(9, 1, 7)
-plt.plot((np.arange(len(std_err_3G[6, :])))*dt, std_err_3G[6, :])
+plt.subplot(6, 1, 5)
+plt.plot((np.arange(len(std_err_3G[4, :])))*dt, std_err_3G[4, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_z, m')
 
-plt.subplot(9, 1, 8)
-plt.plot((np.arange(len(std_err_3G[7, :])))*dt, std_err_3G[7, :])
+plt.subplot(6, 1, 6)
+plt.plot((np.arange(len(std_err_3G[5, :])))*dt, std_err_3G[5, :])
 plt.grid(True)
 plt.xlabel('Time,s')
 plt.ylabel('std_vz, m/s')
-
-plt.subplot(9, 1, 9)
-plt.plot((np.arange(len(std_err_3G[8, :])))*dt, std_err_3G[8, :])
-plt.grid(True)
-plt.xlabel('Time,s')
-plt.ylabel('std_az, m/s^2')
 
 plt.grid(True)
 plt.subplots_adjust(wspace=12.0, hspace=1.0)
