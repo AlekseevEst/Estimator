@@ -22,11 +22,11 @@ M SigmaPoints<M>::compute_sigma_points (const M& X, const M& P, ParamSigmaPoints
 {   
     n = X.rows();
     lamda = pow(paramSigmaPoints.alpha,2) * (n + paramSigmaPoints.kappa) - n;
-    std::cout<<"P = "<<std::endl;
-    PRINTM (P);
+    // std::cout<<"P = "<<std::endl;
+    // PRINTM (P);
     M U = sqrt(lamda + n) * Utils<M>::sqrtMatSpectral(P); //Utils<M>::sqrtMat(P);
-    std::cout<<"U = "<<std::endl;
-    PRINTM(U);
+    // std::cout<<"U = "<<std::endl;
+    // PRINTM(U);
     M Xu (n, 2*n+1);
     // Первый компонент
     Xu.col(0) = X; // в качестве первого сигма вектора берется текущий вектор состояния.

@@ -337,11 +337,10 @@ bool Utils<M>::isPositiveDefinite(const M &matrix) {
         return false;
     }
 
-    // Check if all the eigenvalues are positive
     VectorXd eigenvalues = eigenSolver.eigenvalues();
-    PRINTM(eigenvalues);
+    // PRINTM(eigenvalues);
     for (int i = 0; i < eigenvalues.size(); ++i) {
-        std::cout<<eigenvalues[i]<< std::endl;
+        // std::cout<<eigenvalues[i]<< std::endl;
         if (eigenvalues[i] < 0) {
             std::cout<<"eigenvalues отрицательное.";
             return false;
@@ -349,18 +348,6 @@ bool Utils<M>::isPositiveDefinite(const M &matrix) {
     }
     return true;
 }
-
-
-// template <class M>
-// bool Utils<M>::CheckingConditionsMat(const M &P)
-// {
-//     if ((P.transpose().isApprox(P, 1e-8)) && (P.llt().info() == Eigen::Success) && (P.determinant() != 0))
-//         return true;
-//     else
-//         return false;
-// }
-
-
 
 
 template <class M>

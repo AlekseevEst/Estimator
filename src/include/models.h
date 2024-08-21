@@ -28,7 +28,7 @@ struct FuncConstVel
 };
 
 template <class M>
-struct FuncConstTurn
+struct FuncConstTurnXY
 {
 
     M operator()(M &Xu, double T)
@@ -59,7 +59,39 @@ struct FuncConstTurn
     }
 
 };
+template <class M>
+struct FuncConstTurnXZ
+{
 
+    M operator()(M &Xu, double T)
+    {
+        M F(ENUM_TO_INT(SizeMat::ROW7),ENUM_TO_INT(SizeMat::COL7));
+
+        M Xue(Xu.rows(),Xu.cols());
+        
+        for (int i = 0; i < Xu.cols(); i++)
+        {
+
+            double w = Xu.col(i)(ENUM_TO_INT(CoordPositionMat::W)) * (M_PI/180.0);
+            if (w == 0)
+                w = std::nextafter(0.0, 1.0);
+
+            F << 1.0,  sin(w*T)/w,       0.0,      0.0,     0.0,        -(1-cos(w*T))/w,             0.0,
+                 0.0,  cos(w*T),         0.0,      0.0,     0.0,              -sin(w*T),             0.0,
+                 0.0,  0.0,              1.0,        T,     0.0,                    0.0,             0.0,
+                 0.0,  0.0,              0.0,      1.0,     0.0,                    0.0,             0.0,
+                 0.0,  (1-cos(w*T))/w,   0.0,      0.0,     1.0,             sin(w*T)/w,             0.0,
+                 0.0,  sin(w*T),         0.0,      0.0,     0.0,               cos(w*T),             0.0,
+                 0.0,  0.0,              0.0,      0.0,     0.0,                    0.0,             1.0;
+
+        
+            Xue.col(i) = F * Xu.col(i); 
+        }
+        // PRINTM(Xue);
+        return Xue;
+    }
+
+};
 template <class M>
 struct FuncConstAcceleration
 {

@@ -40,11 +40,7 @@ public:
                                                                                                             UKfilterMath(measNoise, procNoise, paramSigmaPoints)    
                                                                                                             {                                                                                                   
                                                                                                                 correctStruct.X = X;
-                                                                                                                correctStruct.P = UKfilterMath.make_P0_cart(X);
-                                                                                                                std::cout << "Коструктор N Фильтра в Ukf";
-                                                                                                                PRINTM(correctStruct.X);
-                                                                                                                PRINTM(correctStruct.P);
-                                                                                                                                                                                                                            
+                                                                                                                correctStruct.P = UKfilterMath.make_P0_cart(X);                                                                                 
                                                                                                             }
 };
 // template <class M,
@@ -64,19 +60,11 @@ template <class M,
 
 M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::predict(double dt)
 {
-    // correctStruct.P = UKfilterMath.make_P_cart(correctStruct.P, correctStruct.X);
     M sigmaVectors = UKfilterMath.doSigmaVectors(correctStruct.X,correctStruct.P);
-    std::cout<< "Проверка coorectStruct.X и Р В UKF predict после doSigmavec" << std::endl<< std::endl;
-    PRINTM(correctStruct.X);
-    PRINTM(correctStruct.P);
     extrapolatedStateSigmaVectors = stateFunc(sigmaVectors, dt);
     predictStruct.Xe = UKfilterMath.doExtrapolatedStateVector(extrapolatedStateSigmaVectors);
     M G = controlFunc(dt);
     predictStruct.Pe = UKfilterMath.doCovMatExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictStruct.Xe, G);
-    std::cout<< "Проверка predictStruct.Xe" << std::endl<< std::endl;
-    PRINTM(predictStruct.Xe);
-    std::cout<< "Проверка PredictStruct.Pe" << std::endl<< std::endl;
-    PRINTM(predictStruct.Pe);
 
     return predictStruct.Xe;
 }
@@ -92,14 +80,10 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::correct(con
     predictStruct.Pzz = UKfilterMath.doCovMatExtrapolatedMeasVector(extrapolatedMeasSigmaVectors, predictStruct.Ze);
     predictStruct.Se = UKfilterMath.doCovMatInnovation(predictStruct.Pzz);
     predictStruct.K = UKfilterMath.calcGainFilter(extrapolatedStateSigmaVectors, predictStruct.Xe, extrapolatedMeasSigmaVectors,predictStruct.Ze, predictStruct.Se);
-    std::cout<< "Проверка coorectStruct.X и Р В UKF correct до correctState и correctCov" << std::endl<< std::endl;
-    PRINTM(correctStruct.X);
-    PRINTM(correctStruct.P);
+
     correctStruct.X = UKfilterMath.correctState(predictStruct.Xe,Z, predictStruct.Ze, predictStruct.K);
     correctStruct.P = UKfilterMath.correctCov(predictStruct.Pe, predictStruct.K, predictStruct.Se);
-    std::cout<< "Проверка coorectStruct.X и Р В UKF correct После correctState и correctCov" << std::endl<< std::endl;
-    PRINTM(correctStruct.X);
-    PRINTM(correctStruct.P);
+
 
     return correctStruct.X;
 }

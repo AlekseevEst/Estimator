@@ -61,7 +61,7 @@ class Target():
         # return new dictionary
         return {k:self.targetState[k] for k in self.targetState.keys()}
     
-    def CT(self,dt):
+    def CTxy(self,dt):
         # move target with CT model due dt
         keys = ['x','vx','y','vy','z','vz','w']
         X = [self.targetState[i] for i in keys]
@@ -69,6 +69,7 @@ class Target():
         if w == 0:
             w = 1e-9 
         w = np.deg2rad(w)   
+
         F = [[1.0,  1/w*np.sin(w*dt),     0.0,      -1/w*(1-np.cos(w*dt)),  0.0,    0.0,     0.0],
              [0.0,  np.cos(w*dt),         0.0,      -np.sin(w*dt),          0.0,    0.0,     0.0],
              [0.0,  1/w*(1-np.cos(w*dt)), 1.0,      1/w*np.sin(w*dt),       0.0,    0.0,     0.0],
@@ -76,6 +77,34 @@ class Target():
              [0.0,  0.0,                  0.0,      0.0,                    1.0,     dt,     0.0],
              [0.0,  0.0,                  0.0,      0.0,                    0.0,    1.0,     0.0],
              [0.0,  0.0,                  0.0,      0.0,                    0.0,    0.0,     1.0]]
+
+
+        
+        Xe = np.matmul(F,X)
+
+        for (i,k) in enumerate(keys):
+            self.targetState[k] = Xe[i]
+        # return new dictionary
+        return {k:self.targetState[k] for k in self.targetState.keys()}
+    
+
+    def CTxz(self,dt):
+        # move target with CT model due dt
+        keys = ['x','vx','y','vy','z','vz','w']
+        X = [self.targetState[i] for i in keys]
+        w = self.targetState['w'] # save w value
+        if w == 0:
+            w = 1e-9 
+        w = np.deg2rad(w)   
+
+        F = [[1.0,  1/w*np.sin(w*dt),     0.0,      0.0,     0.0,    -1/w*(1-np.cos(w*dt)),             0.0],
+             [0.0,  np.cos(w*dt),         0.0,      0.0,     0.0,            -np.sin(w*dt),             0.0],
+             [0.0,  0.0,                  1.0,      dt,      0.0,                      0.0,             0.0],
+             [0.0,  0.0,                  0.0,      1.0,     0.0,                      0.0,             0.0],
+             [0.0,  1/w*(1-np.cos(w*dt)), 0.0,      0.0,     1.0,         1/w*np.sin(w*dt),             0.0],
+             [0.0,  np.sin(w*dt),         0.0,      0.0,    0.0,             np.cos(w*dt),              0.0],
+             [0.0,  0.0,                  0.0,      0.0,     0.0,                      0.0,             1.0]]
+
         
         Xe = np.matmul(F,X)
 

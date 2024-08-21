@@ -9,7 +9,7 @@ struct Converter
 {
     FuncConstVel<M> modelCv;
     FuncConstAcceleration<M> modelCa;
-    FuncConstTurn<M> modelCt;
+    FuncConstTurnXZ<M> modelCt;
     using SpMat = Eigen::SparseMatrix<double>;
     using T = Eigen::Triplet<double>;
 
