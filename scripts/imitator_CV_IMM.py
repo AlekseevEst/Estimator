@@ -182,7 +182,7 @@ def estimate (Z):
     detection.point = meas
     detection.timePoint = dt
    
-    track = estimator.BindTrackUkfImm_CTxy(detection) #инициал. трассы
+    track = estimator.BindTrackUkfImm_ConteinerCVCACTxy(detection) #инициал. трассы
     # m_i = track.get_m_i()
     # print(m_i)   
 

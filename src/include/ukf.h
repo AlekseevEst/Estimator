@@ -32,6 +32,8 @@ public:
     // void initFilter();
     M predict(double dt) override;
     M correct(const M &Z) override;
+    M step(const M& Z, double dt);
+    M step(double dt);
     double computeDistance(const M&Z);
 
     std::type_index getTypeModelState() const override;
@@ -85,6 +87,27 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::correct(con
     correctStruct.P = UKfilterMath.correctCov(predictStruct.Pe, predictStruct.K, predictStruct.Se);
 
 
+    return correctStruct.X;
+}
+
+template <class M,
+          template <typename> class StateFunc,
+          template <typename> class MeasurementFunc,
+          template <typename> class ControlFunc>
+M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::step(const M &Z, double dt)
+{
+    predict(dt);
+    return correct(Z);
+}
+
+template <class M,
+          template <typename> class StateFunc,
+          template <typename> class MeasurementFunc,
+          template <typename> class ControlFunc>
+M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::step(double dt)
+{
+    correctStruct.X = predict(dt);
+    correctStruct.P = predictStruct.Pe;
     return correctStruct.X;
 }
 

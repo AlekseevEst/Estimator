@@ -87,6 +87,33 @@ struct Imm
         return X;
     }
 
+     M step (double dt)
+    {
+        mu_ij = computeMixingProbability(p_ij, mu_i);
+        std::pair<std::vector<M>, std::vector<M>> stateCovInit = InitMixingStateAndCovariance(mu_ij);
+
+        conteiner.ukfCvSph->correctStruct.X = stateCovInit.first[0];
+        conteiner.ukfCvSph->correctStruct.P = stateCovInit.second[0];
+        conteiner.ukfCvSph->correctStruct.X = conteiner.ukfCvSph->predict(dt);
+        conteiner.ukfCvSph->correctStruct.P = conteiner.ukfCvSph->predictStruct.Pe;
+
+        conteiner.ukfCtSph->correctStruct.X = stateCovInit.first[1];
+        conteiner.ukfCtSph->correctStruct.P = stateCovInit.second[1];
+        conteiner.ukfCtSph->correctStruct.X = conteiner.ukfCtSph->predict(dt);
+        conteiner.ukfCtSph->correctStruct.P = conteiner.ukfCtSph->predictStruct.Pe;
+
+        conteiner.ukfCaSph->correctStruct.X = stateCovInit.first[2];
+        conteiner.ukfCaSph->correctStruct.P = stateCovInit.second[2];
+        conteiner.ukfCaSph->correctStruct.X = conteiner.ukfCaSph->predict(dt);
+        conteiner.ukfCaSph->correctStruct.P = conteiner.ukfCaSph->predictStruct.Pe;
+
+        mu_i(0,0) = cj(0,0);
+        mu_i(0,1) = cj(0,1);
+        mu_i(0,2) = cj(0,2);
+
+        return combinationModelCondition();
+    }
+
     M computeMixingProbability(const M &p_ij, const M &mu_i)
     {
         cj.resize(1, mu_i.cols());
@@ -180,82 +207,24 @@ struct Imm
     }
 
     void filterStep(const M& Z, std::pair<std::vector<M>,std::vector<M>>& stateCov, double dt)
-    {   std::cout<< "CV" << std::endl<< std::endl;
-        // std::cout<< "На это будем метять coorectStruct.X" << std::endl<< std::endl;
-        // PRINTM(stateCov.first[0]);
-        // std::cout<< "Было coorectStruct.X" << std::endl<< std::endl;
-        // PRINTM(conteiner.ukfCvSph->correctStruct.X);
+    {   
         conteiner.ukfCvSph->correctStruct.X = stateCov.first[0];
-        // std::cout<< "стало coorectStruct.X" << std::endl<< std::endl;
-        // PRINTM(conteiner.ukfCvSph->correctStruct.X);
-        
-        // std::cout<< "На это будем метять coorectStruct.Р" << std::endl<< std::endl;
-        // PRINTM(stateCov.second[0]);
-        // std::cout<< "Было coorectStruct.P" << std::endl<< std::endl;
         conteiner.ukfCvSph->correctStruct.P = stateCov.second[0];
-        // std::cout<< "стало coorectStruct.Р" << std::endl<< std::endl;
-
-        // std::cout<< "После Predict_CV" << std::endl<< std::endl;
 
         conteiner.ukfCvSph->predict(dt);
-
-        // PRINTM(conteiner.ukfCvSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCvSph->correctStruct.P);
-
-        std::cout<< "После Correct_CV" << std::endl<< std::endl;
         conteiner.ukfCvSph->correct(Z);
-        // PRINTM(conteiner.ukfCvSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCvSph->correctStruct.P);
 
-
-        std::cout<< "CT" << std::endl<< std::endl;
-        // std::cout<< "Было coorectStruct.X и Р" << std::endl<< std::endl;
-        // PRINTM(conteiner.ukfCtSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCtSph->correctStruct.P);
-        // std::cout<< "На это будем метять coorectStruct.X и Р" << std::endl<< std::endl;
-        // PRINTM(stateCov.first[1]);
-        // PRINTM(stateCov.second[1]);
         conteiner.ukfCtSph->correctStruct.X = stateCov.first[1];
         conteiner.ukfCtSph->correctStruct.P = stateCov.second[1];
 
-        // std::cout<< "Стало coorectStruct.X и Р" << std::endl<< std::endl;
-        // PRINTM(conteiner.ukfCtSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCtSph->correctStruct.P);
-
-        // std::cout<< "Полсе Predict_CT" << std::endl<< std::endl;
         conteiner.ukfCtSph->predict(dt);
-        // PRINTM(conteiner.ukfCtSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCtSph->correctStruct.P);
-
-        std::cout<< "После Correct_CT" << std::endl<< std::endl;
         conteiner.ukfCtSph->correct(Z);
-        // PRINTM(conteiner.ukfCtSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCtSph->correctStruct.P);
 
-        std::cout<< "CA" << std::endl<< std::endl;
-        // std::cout<< "Было coorectStruct.X и Р" << std::endl<< std::endl;
-        // PRINTM(conteiner.ukfCaSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCaSph->correctStruct.P);
-        // std::cout<< "На это будем метять coorectStruct.X и Р" << std::endl<< std::endl;
-        // PRINTM(stateCov.first[2]);
-        // PRINTM(stateCov.second[2]);
         conteiner.ukfCaSph->correctStruct.X = stateCov.first[2];
         conteiner.ukfCaSph->correctStruct.P = stateCov.second[2];
-        // std::cout<< "Стало coorectStruct.X и Р" << std::endl<< std::endl;
 
-        // PRINTM(conteiner.ukfCaSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCaSph->correctStruct.P);
-
-        // std::cout<< "После Predict_CA" << std::endl<< std::endl;
         conteiner.ukfCaSph->predict(dt);
-
-        // PRINTM(conteiner.ukfCaSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCaSph->correctStruct.P);
-
-        std::cout<< "После Correct_CA" << std::endl<< std::endl;
-        conteiner.ukfCaSph->correct(Z);
-        // PRINTM(conteiner.ukfCaSph->correctStruct.X);
-        // PRINTM(conteiner.ukfCaSph->correctStruct.P);        
+        conteiner.ukfCaSph->correct(Z);   
     }
 
     double likelihoodFunction(const M &Z, const M &Ze, const M &Se)
@@ -336,7 +305,8 @@ TEST_CASE("test_imm")
 
     double dt = 1.0;
     PRINTM(imm.step(Z,dt));
+    PRINTM(imm.step(dt));
     BENCHMARK("imm"){
-    // Eigen::MatrixXd r = imm.step(Z,dt);
+
     };
 }

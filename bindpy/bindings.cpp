@@ -7,8 +7,6 @@ PYBIND11_MODULE(estimator, m) {
     bind_track_CTxz(m);
     bind_track_CV(m);
     bind_track_CA(m);
-    bind_track_Imm_CTxy(m);
-    bind_track_Imm_CTxz(m);
-    // bind_ekf(m);
-    // bind_imm(m);
+    bind_track_Imm_ConteinerCVCACTxy(m);
+    bind_track_Imm_ConteinerCVCACTxz(m);
 }

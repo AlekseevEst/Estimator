@@ -220,75 +220,10 @@ struct InitUKFStateModelCAMeasureModelSph
 
 template<class M,
          template <typename> class ConteinerType>        
-struct InitUkfImmCVCTxyCAMeasureModelSph
+struct InitUkfImmMeasureModelSph
 {
     M X0;
     M P0;
-    M  processNoise;
-    M  measurementNoise;
-    M  mu_i;
-    M  p_ij;
-    ParamSigmaPoints p;
-
-    std::unique_ptr<Imm<M, ConteinerType>> make_estimator()
-    {
-        return std::make_unique<Imm<M, ConteinerType>>(mu_i, p_ij, X0, processNoise, measurementNoise, p);
-    }
-
-    void InitializationEstimator(const Detection<M>& detection)
-    {
-        typedef Eigen::SparseMatrix<double> SpMat;
-        typedef Eigen::Triplet<double> T;
-
-        SpMat Hp(3,6);
-        std::vector<T> tripletList;
-        tripletList.reserve(3);
-
-        tripletList.push_back(T(0, 0, 1.0));
-        tripletList.push_back(T(1, 2, 1.0));
-        tripletList.push_back(T(2, 4, 1.0));
-        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
-        
-        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
-
-        
-        //-------------------------------------------------------------------------
-        double process_var = 10.0;
-        double sko_range  = 100.0;
-        double sko_Az = 0.1/3.0;
-        double sko_Um = 0.1/3.0;
-        p.alpha = 1e-3;
-        p.beta = 2.0;
-        p.kappa = 3.0 - X0.rows();
-        //-------------------------------------------------------------------------
-     
-        processNoise.resize(3,3);
-        processNoise <<  process_var,            0.0,          0.0,
-                                0.0,        process_var,       0.0,
-                                0.0,             0.0,      process_var;
-
-        
-        measurementNoise.resize(3,3);
-        measurementNoise << pow(sko_range,2),          0.0,                  0.0,
-                                    0.0,         pow(sko_Az,2),              0.0,
-                                    0.0,                0.0,            pow(sko_Um,2);
-
-        mu_i.resize(1,3);                            
-        mu_i << 1.0/3.0, 1.0/3.0, 1.0/3.0;
-
-        p_ij.resize(3,3);                            
-        p_ij << 0.97, 0.015, 0.015,
-                0.015, 0.97, 0.015,
-                0.015, 0.015, 0.97;
-                                                                        
-    }
-
-};
-template<class M,
-         template <typename> class ConteinerType>        
-struct InitUkfImmCVCTxzCAMeasureModelSph
-{
-    M X0;
     M  processNoise;
     M  measurementNoise;
     M  mu_i;
@@ -354,9 +289,9 @@ template<class M, class TypeEstimator, class TypeEstimatorInit>
 struct Track
 {
 private:
-    std::unique_ptr<TypeEstimator> estimator;
     double timePoint;
 public:
+    std::unique_ptr<TypeEstimator> estimator;
     Track(const Detection<M>& detection)
     {
         TypeEstimatorInit estimatorInit;
@@ -370,9 +305,7 @@ public:
         {   
             double dt = detection.timePoint - timePoint;
             timePoint = detection.timePoint;
-            M Xe = estimator->predict(dt);
-            M X = estimator->correct(detection.point);
-            return X;
+            return estimator->step(detection.point, dt);
         }
         catch (const std::runtime_error &e)
         {
@@ -387,65 +320,12 @@ public:
         {
         double dt = t - timePoint;
         timePoint = t;
-        estimator->correctStruct.X = estimator->predict(dt);
-        estimator->correctStruct.P = estimator->predictStruct.Pe;
-        return estimator->correctStruct.X;
+        return estimator->step(dt);
         }
                 catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
             return M();
         }
-    }
-};
-
-
-
-template<class M, class TypeEstimator, class TypeEstimatorInit>
-struct TrackImm
-{
-private:
-    
-    double timePoint;
-public:
-    std::unique_ptr<TypeEstimator> estimator;
-    TrackImm(const Detection<M>& detection)
-    {
-        TypeEstimatorInit estimatorInit;
-        estimatorInit.InitializationEstimator(detection);
-        estimator = estimatorInit.make_estimator();
-        timePoint = detection.timePoint;
-    }
-    M step(const Detection<M> &detection)
-    {
-        try
-        {   
-            double dt = detection.timePoint - timePoint;
-            timePoint = detection.timePoint;
-            M X = estimator->step(detection.point,dt);
-            return X;
-        }
-        catch (const std::runtime_error &e)
-        {
-            std::cerr << e.what() << '\n';
-            return M();
-        }
-    }
-    
-    M step(double t)
-    {
-        // try
-        // {
-        // double dt = t - timePoint;
-        // timePoint = t;
-        // estimator->correctStruct.X = estimator->predict(dt);
-        // estimator->correctStruct.P = estimator->predictStruct.Pe;
-        // return estimator->correctStruct.X;
-        // }
-        //         catch (const std::exception &e)
-        // {
-        //     std::cerr << e.what() << '\n';
-        //     return M();
-        // }
     }
 };

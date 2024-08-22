@@ -40,6 +40,38 @@ struct Imm
 
         return X;
     }
+    M step (double dt)
+    {
+        mu_ij = computeMixingProbability(p_ij, mu_i);
+        std::pair<std::vector<M>, std::vector<M>> stateCovInit = InitMixingStateAndCovariance(mu_ij);
+
+        conteiner.ukfCvSph->correctStruct.X = stateCovInit.first[0];
+        conteiner.ukfCvSph->correctStruct.P = stateCovInit.second[0];
+        PRINTM (stateCovInit.first[0]);
+        conteiner.ukfCvSph->correctStruct.X = conteiner.ukfCvSph->predict(dt);
+        PRINTM(conteiner.ukfCvSph->correctStruct.X);
+        conteiner.ukfCvSph->correctStruct.P = conteiner.ukfCvSph->predictStruct.Pe;
+        PRINTM(conteiner.ukfCvSph->correctStruct.P);
+
+        conteiner.ukfCtSph->correctStruct.X = stateCovInit.first[1];
+        PRINTM (stateCovInit.first[1]);
+        conteiner.ukfCtSph->correctStruct.P = stateCovInit.second[1];
+        conteiner.ukfCtSph->correctStruct.X = conteiner.ukfCtSph->predict(dt);
+        PRINTM(conteiner.ukfCvSph->correctStruct.X);
+        conteiner.ukfCtSph->correctStruct.P = conteiner.ukfCtSph->predictStruct.Pe;
+        PRINTM(conteiner.ukfCvSph->correctStruct.P);
+
+        conteiner.ukfCaSph->correctStruct.X = stateCovInit.first[2];
+        conteiner.ukfCaSph->correctStruct.P = stateCovInit.second[2];
+        conteiner.ukfCaSph->correctStruct.X = conteiner.ukfCaSph->predict(dt);
+        conteiner.ukfCaSph->correctStruct.P = conteiner.ukfCaSph->predictStruct.Pe;
+
+        mu_i(0,0) = cj(0,0);
+        mu_i(0,1) = cj(0,1);
+        mu_i(0,2) = cj(0,2);
+
+        return combinationModelCondition();
+    }
 
     M computeMixingProbability(const M &p_ij, const M &mu_i)
     {

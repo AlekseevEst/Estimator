@@ -10,7 +10,7 @@ import random
 import estimator
 from models import Target
 
-dt = 6.0
+dt = 1.0
 pd = 1.0
 
 R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg
@@ -182,7 +182,7 @@ def estimate (Z):
     detection.point = meas
     detection.timePoint = dt
    
-    track = estimator.BindTrackUkfImm_CTxz(detection) #инициал. трассы
+    track = estimator.BindTrackUkfImm_ConteinerCVCACTxz(detection) #инициал. трассы
     
     X_c = np.empty((6, 0))
     m_i = np.empty((0, 3))
