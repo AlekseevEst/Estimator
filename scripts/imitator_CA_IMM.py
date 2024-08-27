@@ -22,7 +22,7 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-init_state = {'x':90000.0, 'y':0.0, 'z':0.0, 'vx':-1000.0, 'vy':0.0, 'vz':0.0, 'ax': 50.0, 'ay': 0.0, 'az': 0.0}
+init_state = {'x':10000.0, 'y':0.0, 'z':10000.0, 'vx':200.0, 'vy':0.0, 'vz':0.0, 'ax': 45.0, 'ay': 0.0, 'az': 29.4}
 tg1.init_state(init_state)
 n = 30
 

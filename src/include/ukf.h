@@ -36,7 +36,7 @@ public:
     M step(double dt);
     double computeDistance(const M&Z);
 
-    std::type_index getTypeModelState() const override;
+    std::type_index getModelType() const override;
 
     UnscentedKalmanfilter(const M& X, const M& procNoise, const M& measNoise , ParamSigmaPoints paramSigmaPoints): 
                                                                                                             UKfilterMath(measNoise, procNoise, paramSigmaPoints)    
@@ -127,7 +127,8 @@ template <class M,
           template <typename> class StateFunc,
           template <typename> class MeasurementFunc,
           template <typename> class ControlFunc>
-std::type_index UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::getTypeModelState() const
+std::type_index UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::getModelType() const
 {
-    return typeid(StateFunc<M>);
+    // std::cout<<typeid(stateFunc).name()<<std::endl;
+    return std::type_index(typeid(stateFunc));
 }

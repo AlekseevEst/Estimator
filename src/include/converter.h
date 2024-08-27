@@ -9,10 +9,10 @@ struct Converter
 {
     FuncConstVel<M> modelCv;
     FuncConstAcceleration<M> modelCa;
-    FuncConstTurnXZ<M> modelCt;
+    FuncConstTurnXZ<M> modelCtXz;
+    FuncConstTurnXY<M> modelCtXy;
     using SpMat = Eigen::SparseMatrix<double>;
     using T = Eigen::Triplet<double>;
-
 
     std::unordered_map<namespaceKeyMap::KeyMap, std::function<M(M)>, namespaceKeyMap::Hash_fn> m;
 
@@ -43,11 +43,39 @@ struct Converter
         HTurnAcc.setFromTriplets(tripletList.begin(), tripletList.end());
         tripletList.clear();
 
-        m[{typeid(modelCv), typeid(modelCt)}] = [HVelTurn](const M &matStateOrCov)
+        m[{typeid(modelCv), typeid(modelCv)}] = [](const M &matStateOrCov)
+        {
+            return matStateOrCov;
+        };
+
+        m[{typeid(modelCtXy), typeid(modelCtXy)}] = [](const M &matStateOrCov)
+        {
+            return matStateOrCov;
+        };
+
+        m[{typeid(modelCtXz), typeid(modelCtXz)}] = [](const M &matStateOrCov)
+        {
+            return matStateOrCov;
+        };
+        m[{typeid(modelCtXy), typeid(modelCtXz)}] = [](const M &matStateOrCov)
+        {
+            return matStateOrCov;
+        };
+        m[{typeid(modelCtXz), typeid(modelCtXy)}] = [](const M &matStateOrCov)
+        {
+            return matStateOrCov;
+        };
+
+        m[{typeid(modelCa), typeid(modelCa)}] = [](const M &matStateOrCov)
+        {
+            return matStateOrCov;
+        };
+
+        m[{typeid(modelCv), typeid(modelCtXy)}] = [HVelTurn](const M &matStateOrCov)
         {
             M res;
             if (matStateOrCov.cols() == 1)
-            {   
+            {
                 res = HVelTurn.transpose() * matStateOrCov;
                 return res;
             }
@@ -55,7 +83,31 @@ struct Converter
             return res;
         };
 
-        m[{typeid(modelCt), typeid(modelCv)}] = [HVelTurn](const M &matStateOrCov)
+        m[{typeid(modelCv), typeid(modelCtXz)}] = [HVelTurn](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HVelTurn.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HVelTurn.transpose() * matStateOrCov * HVelTurn;
+            return res;
+        };
+
+        m[{typeid(modelCtXy), typeid(modelCv)}] = [HVelTurn](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HVelTurn * matStateOrCov;
+                return res;
+            }
+            res = HVelTurn * matStateOrCov * HVelTurn.transpose();
+            return res;
+        };
+
+        m[{typeid(modelCtXz), typeid(modelCv)}] = [HVelTurn](const M &matStateOrCov)
         {
             M res;
             if (matStateOrCov.cols() == 1)
@@ -91,7 +143,18 @@ struct Converter
             return res;
         };
 
-        m[{typeid(modelCt), typeid(modelCa)}] = [HTurnAcc](const M &matStateOrCov)
+        m[{typeid(modelCtXy), typeid(modelCa)}] = [HTurnAcc](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HTurnAcc.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HTurnAcc.transpose() * matStateOrCov * HTurnAcc;
+            return res;
+        };
+        m[{typeid(modelCtXz), typeid(modelCa)}] = [HTurnAcc](const M &matStateOrCov)
         {
             M res;
             if (matStateOrCov.cols() == 1)
@@ -103,7 +166,18 @@ struct Converter
             return res;
         };
 
-        m[{typeid(modelCa), typeid(modelCt)}] = [HTurnAcc](const M &matStateOrCov)
+        m[{typeid(modelCa), typeid(modelCtXy)}] = [HTurnAcc](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HTurnAcc * matStateOrCov;
+                return res;
+            }
+            res = HTurnAcc * matStateOrCov * HTurnAcc.transpose();
+            return res;
+        };
+        m[{typeid(modelCa), typeid(modelCtXz)}] = [HTurnAcc](const M &matStateOrCov)
         {
             M res;
             if (matStateOrCov.cols() == 1)

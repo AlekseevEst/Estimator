@@ -14,6 +14,8 @@ struct ConteinerCVCACT
     std::shared_ptr <IFilter<M>> ukfCtSph;
     std::shared_ptr <IFilter<M>> ukfCaSph;
 
+    std::vector<std::shared_ptr<IFilter<M>>> filters;
+
     ConteinerCVCACT(const M& X, const M& procNoise, const M& measNoise, ParamSigmaPoints paramSigmaPoints)
     {
                M ProcNoiseCT(4, 4);
@@ -31,10 +33,13 @@ struct ConteinerCVCACT
         // здесь выделяем память. Пока что все вместе: и выделение и инициализация фильтров
         ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X, ProcNoiseCV, measNoise, paramSigmaPoints);
         paramSigmaPoints.kappa = 3 - 7; //параметр ансцентного преобразования задал вручную для CT. 
-        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXZ, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCt)}](X), ProcNoiseCT, measNoise, paramSigmaPoints);
+        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXY, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X), ProcNoiseCT, measNoise, paramSigmaPoints);
         paramSigmaPoints.kappa = 3 - 9; //параметр ансцентного преобразования задал вручную для CA. 
         ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X), procNoise, measNoise, paramSigmaPoints);
-
+        
+        filters.push_back(ukfCvSph);
+        filters.push_back(ukfCtSph);
+        filters.push_back(ukfCaSph);
     }
     // initConteinerCVCACT()
     // {
@@ -56,10 +61,6 @@ struct Imm
 {
     ConteinerType<M> conteiner;
     Converter<M> converter;
-
-    // StateCov<M> stateCovCorrect;
-    // StateCov<M> statCovBuff;
-    // StateCov<M> stateCovPredict;
     
     M mu_i; // Вероятности режима i
     M p_ij;   // переходная вероятность режима из i в j
@@ -76,40 +77,30 @@ struct Imm
 
     M step(const M& Z ,double dt)
     {
+        PRINTM (mu_i);
         mu_ij = computeMixingProbability(p_ij, mu_i);
         PRINTM(mu_ij);
         std::pair<std::vector<M>,std::vector<M>> stateCovInit = InitMixingStateAndCovariance (mu_ij);
 
         filterStep(Z, stateCovInit,dt);
         updateModeProbability(Z, cj);
-        M X = combinationModelCondition();
+        return combinationModelCondition();
 
-        return X;
     }
-
-     M step (double dt)
+    M step(double dt)
     {
         mu_ij = computeMixingProbability(p_ij, mu_i);
         std::pair<std::vector<M>, std::vector<M>> stateCovInit = InitMixingStateAndCovariance(mu_ij);
+        for (size_t i = 0; i < conteiner.filters.size(); ++i)
+        {   
+            conteiner.filters[i]->correctStruct.X = stateCovInit.first[i]; // допустим тут будет своп
+            conteiner.filters[i]->correctStruct.P = stateCovInit.second[i];
+    
+            conteiner.filters[i]->correctStruct.X = conteiner.filters[i]->predict(dt);
+            conteiner.filters[i]->correctStruct.P = conteiner.filters[i]->predictStruct.Pe;
 
-        conteiner.ukfCvSph->correctStruct.X = stateCovInit.first[0];
-        conteiner.ukfCvSph->correctStruct.P = stateCovInit.second[0];
-        conteiner.ukfCvSph->correctStruct.X = conteiner.ukfCvSph->predict(dt);
-        conteiner.ukfCvSph->correctStruct.P = conteiner.ukfCvSph->predictStruct.Pe;
-
-        conteiner.ukfCtSph->correctStruct.X = stateCovInit.first[1];
-        conteiner.ukfCtSph->correctStruct.P = stateCovInit.second[1];
-        conteiner.ukfCtSph->correctStruct.X = conteiner.ukfCtSph->predict(dt);
-        conteiner.ukfCtSph->correctStruct.P = conteiner.ukfCtSph->predictStruct.Pe;
-
-        conteiner.ukfCaSph->correctStruct.X = stateCovInit.first[2];
-        conteiner.ukfCaSph->correctStruct.P = stateCovInit.second[2];
-        conteiner.ukfCaSph->correctStruct.X = conteiner.ukfCaSph->predict(dt);
-        conteiner.ukfCaSph->correctStruct.P = conteiner.ukfCaSph->predictStruct.Pe;
-
-        mu_i(0,0) = cj(0,0);
-        mu_i(0,1) = cj(0,1);
-        mu_i(0,2) = cj(0,2);
+            mu_i(0, i) = cj(0, i);
+        }
 
         return combinationModelCondition();
     }
@@ -123,13 +114,12 @@ struct Imm
             double c = 0.;
             for (long int i = 0; i < p_ij.cols(); i++)
             {
-                c = c + (p_ij(i, j) * mu_i(0, i));
+                c +=(p_ij(i, j) * mu_i(0, i));
             }
             cj(0, j) = c;
         }
 
-        M mix;
-        mix.resize(p_ij.rows(), p_ij.cols());
+        M mix(p_ij.rows(), p_ij.cols());
 
         for (long int j = 0; j < p_ij.cols(); j++)
         {
@@ -141,90 +131,49 @@ struct Imm
         return mix;
     }
 
-    std::pair<std::vector<M>,std::vector<M>> InitMixingStateAndCovariance(const M& mu_ij) // как сделать универсально?
+
+       std::pair<std::vector<M>, std::vector<M>> InitMixingStateAndCovariance(const M &mu_ij)
     {
-        std::pair<std::vector<M>,std::vector<M>> initMixingStateAndCovariance;
         std::vector<M> statesOfFilters;
         std::vector<M> covarianceOfFilters;
 
-        // PRINTM(mu_ij);
-        // PRINTM(conteiner.ukfCvSph->correctStruct.P);
-        // PRINTM(conteiner.ukfCtSph->correctStruct.P);
-        // PRINTM(conteiner.ukfCaSph->correctStruct.P);
+        for (size_t j = 0; j < conteiner.filters.size(); ++j)
+        {
+            M mixedState = M::Zero(conteiner.filters[j]->correctStruct.X.rows(), conteiner.filters[j]->correctStruct.X.cols());
+            M mixedCovariance = M::Zero(conteiner.filters[j]->correctStruct.P.rows(), conteiner.filters[j]->correctStruct.P.cols());
 
+            for (size_t i = 0; i < conteiner.filters.size(); ++i)
+            {
+                M convertedState = converter.m[{conteiner.filters[i]->getModelType(),conteiner.filters[j]->getModelType()}](conteiner.filters[i]->correctStruct.X);
+                mixedState += mu_ij(i, j) * convertedState;
+            }
+                statesOfFilters.push_back(mixedState);
 
-        M X0Cv = mu_ij(0,0) * conteiner.ukfCvSph->correctStruct.X + 
-                 mu_ij(1,0) * converter.m[{typeid(converter.modelCt), typeid(converter.modelCv)}](conteiner.ukfCtSph->correctStruct.X) + 
-                 mu_ij(2,0) * converter.m[{typeid(converter.modelCa), typeid(converter.modelCv)}](conteiner.ukfCaSph->correctStruct.X);
+            for (size_t i = 0; i < conteiner.filters.size(); ++i)
+            {
+                M convertedState = converter.m[{conteiner.filters[i]->getModelType(),conteiner.filters[j]->getModelType()}](conteiner.filters[i]->correctStruct.X);
+                M dX = convertedState - mixedState;
+                M convertedCovariance = converter.m[{conteiner.filters[i]->getModelType(),conteiner.filters[j]->getModelType()}](conteiner.filters[i]->correctStruct.P);
+                mixedCovariance += mu_ij(i, j) * (convertedCovariance + dX * dX.transpose());
+            }
+                        
+            covarianceOfFilters.push_back(mixedCovariance);
+        }
 
-        statesOfFilters.push_back(X0Cv);
-
-        M X0Ct = mu_ij(0,1) * converter.m[{typeid(converter.modelCv), typeid(converter.modelCt)}](conteiner.ukfCvSph->correctStruct.X) + 
-                 mu_ij(1,1) * conteiner.ukfCtSph->correctStruct.X + 
-                 mu_ij(2,1) * converter.m[{typeid(converter.modelCa), typeid(converter.modelCt)}](conteiner.ukfCaSph->correctStruct.X);  
-  
-        statesOfFilters.push_back(X0Ct);
-
-        M X0Ca = mu_ij(0,2) * converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](conteiner.ukfCvSph->correctStruct.X) + 
-                 mu_ij(1,2) * converter.m[{typeid(converter.modelCt), typeid(converter.modelCa)}](conteiner.ukfCtSph->correctStruct.X) + 
-                 mu_ij(2,2) * conteiner.ukfCaSph->correctStruct.X;
-
-        statesOfFilters.push_back(X0Ca);
-
-        M dXcvX0cv = conteiner.ukfCvSph->correctStruct.X - X0Cv;
-        M dXctX0cv = converter.m[{typeid(converter.modelCt), typeid(converter.modelCv)}](conteiner.ukfCtSph->correctStruct.X) - X0Cv;
-        M dXcaX0cv = converter.m[{typeid(converter.modelCa), typeid(converter.modelCv)}](conteiner.ukfCaSph->correctStruct.X) - X0Cv;
-
-
-        M dXcvX0ct = converter.m[{typeid(converter.modelCv), typeid(converter.modelCt)}](conteiner.ukfCvSph->correctStruct.X) - X0Ct;
-        M dXctX0ct = conteiner.ukfCtSph->correctStruct.X - X0Ct;
-        M dXcaX0ct = converter.m[{typeid(converter.modelCa), typeid(converter.modelCt)}](conteiner.ukfCaSph->correctStruct.X) - X0Ct;
-
-
-        M dXcvX0ca = converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](conteiner.ukfCvSph->correctStruct.X) - X0Ca;                          
-        M dXctX0ca = converter.m[{typeid(converter.modelCt), typeid(converter.modelCa)}](conteiner.ukfCtSph->correctStruct.X) - X0Ca;        
-        M dXcaX0ca = conteiner.ukfCaSph->correctStruct.X - X0Ca;  
-
-
-        M P0Cv = mu_ij(0,0) * (conteiner.ukfCvSph->correctStruct.P + dXcvX0cv * dXcvX0cv.transpose()) +
-                 mu_ij(1,0) * (converter.m[{typeid(converter.modelCt), typeid(converter.modelCv)}](conteiner.ukfCtSph->correctStruct.P) + dXctX0cv * dXctX0cv.transpose()) +
-                 mu_ij(2,0) * (converter.m[{typeid(converter.modelCa), typeid(converter.modelCv)}](conteiner.ukfCaSph->correctStruct.P) + dXcaX0cv * dXcaX0cv.transpose());
-        covarianceOfFilters.push_back(P0Cv);
-
-        M P0Ct = mu_ij(0,1) * (converter.m[{typeid(converter.modelCv), typeid(converter.modelCt)}](conteiner.ukfCvSph->correctStruct.P) + dXcvX0ct * dXcvX0ct.transpose()) +
-                 mu_ij(1,1) * (conteiner.ukfCtSph->correctStruct.P + dXctX0ct * dXctX0ct.transpose()) +
-                 mu_ij(2,1) * (converter.m[{typeid(converter.modelCa), typeid(converter.modelCt)}](conteiner.ukfCaSph->correctStruct.P) + dXcaX0ct * dXcaX0ct.transpose());
-        covarianceOfFilters.push_back(P0Ct);
-                 
-        M P0Ca = mu_ij(0,2) * (converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](conteiner.ukfCvSph->correctStruct.P) + dXcvX0ca * dXcvX0ca.transpose()) +
-                 mu_ij(1,2) * (converter.m[{typeid(converter.modelCt), typeid(converter.modelCa)}](conteiner.ukfCtSph->correctStruct.P) + dXctX0ca * dXctX0ca.transpose()) +
-                 mu_ij(2,2) * (conteiner.ukfCaSph->correctStruct.P + dXcaX0ca * dXcaX0ca.transpose());    
-        covarianceOfFilters.push_back(P0Ca);
-        
-        initMixingStateAndCovariance = std::make_pair(statesOfFilters,covarianceOfFilters);
-
-        return initMixingStateAndCovariance;
+        return std::make_pair(statesOfFilters, covarianceOfFilters);
     }
 
-    void filterStep(const M& Z, std::pair<std::vector<M>,std::vector<M>>& stateCov, double dt)
-    {   
-        conteiner.ukfCvSph->correctStruct.X = stateCov.first[0];
-        conteiner.ukfCvSph->correctStruct.P = stateCov.second[0];
+    void filterStep(const M &Z, std::pair<std::vector<M>, std::vector<M>> &stateCov, double dt)
+    {
+        for (size_t i = 0; i < conteiner.filters.size(); ++i)
+        {
 
-        conteiner.ukfCvSph->predict(dt);
-        conteiner.ukfCvSph->correct(Z);
+            conteiner.filters[i]->correctStruct.X = stateCov.first[i];
+            conteiner.filters[i]->correctStruct.P = stateCov.second[i];
 
-        conteiner.ukfCtSph->correctStruct.X = stateCov.first[1];
-        conteiner.ukfCtSph->correctStruct.P = stateCov.second[1];
-
-        conteiner.ukfCtSph->predict(dt);
-        conteiner.ukfCtSph->correct(Z);
-
-        conteiner.ukfCaSph->correctStruct.X = stateCov.first[2];
-        conteiner.ukfCaSph->correctStruct.P = stateCov.second[2];
-
-        conteiner.ukfCaSph->predict(dt);
-        conteiner.ukfCaSph->correct(Z);   
+            conteiner.filters[i]->predict(dt);
+            conteiner.filters[i]->correct(Z);
+        }
     }
 
     double likelihoodFunction(const M &Z, const M &Ze, const M &Se)
@@ -237,32 +186,40 @@ struct Imm
         return probability;
     }
 
-    void updateModeProbability(const M& Z, const M& cj)
+    void updateModeProbability(const M &Z, const M &cj)
     {
-        mu_i(0,0) = likelihoodFunction(Z, conteiner.ukfCvSph->predictStruct.Ze, conteiner.ukfCvSph->predictStruct.Se) * cj(0,0);
-        mu_i(0,1) = likelihoodFunction(Z, conteiner.ukfCtSph->predictStruct.Ze, conteiner.ukfCtSph->predictStruct.Se) * cj(0,1);
-        mu_i(0,2) = likelihoodFunction(Z, conteiner.ukfCaSph->predictStruct.Ze, conteiner.ukfCaSph->predictStruct.Se) * cj(0,2);
-        long double c = mu_i(0,0) + mu_i(0,1) + mu_i(0,2);
+        long double c = 0.0;
+        for (size_t i = 0; i < conteiner.filters.size(); ++i)
+        {
+            mu_i(0, i) = likelihoodFunction(Z, conteiner.filters[i]->predictStruct.Ze, conteiner.filters[i]->predictStruct.Se) * cj(0, i);
+            c += mu_i(0, i);
+        }
 
-        mu_i(0,0) = mu_i(0,0)/c;
-        mu_i(0,1) = mu_i(0,1)/c;
-        mu_i(0,2) = mu_i(0,2)/c;
+        for (size_t i = 0; i < conteiner.filters.size(); ++i)
+        {
+            mu_i(0, i) /= c;
+        }
+
     }
 
-    M combinationModelCondition()
+    M combinationModelCondition(/* Флаг означающий модель вывода состояния*/) // сейчас возвращаяется модель CV
     {
-       M X = mu_i(0,0)* conteiner.ukfCvSph->correctStruct.X +
-             mu_i(0,1)* converter.m[{typeid(converter.modelCt), typeid(converter.modelCv)}] (conteiner.ukfCtSph->correctStruct.X) +
-             mu_i(0,2)* converter.m[{typeid(converter.modelCa), typeid (converter.modelCv)}] (conteiner.ukfCaSph->correctStruct.X);
+        M X = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());
+        M dx = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());
+        M P = M::Zero(conteiner.filters[0]->correctStruct.P.rows(), conteiner.filters[0]->correctStruct.P.cols());
 
-        M dxCv = conteiner.ukfCvSph->correctStruct.X - X;
-        M dxCt = converter.m[{typeid(converter.modelCt), typeid(converter.modelCv)}] (conteiner.ukfCtSph->correctStruct.X) - X;
-        M dxCa = converter.m[{typeid(converter.modelCa), typeid(converter.modelCv)}] (conteiner.ukfCaSph->correctStruct.X) - X;
+        for (size_t i = 0; i < conteiner.filters.size(); ++i)
+        {
+            M convertedState = converter.m[{conteiner.filters[i]->getModelType(), typeid(converter.modelCv)}](conteiner.filters[i]->correctStruct.X);
+            X += mu_i(0, i) * convertedState;
+        }
 
-       M P =  mu_i(0,0) * (conteiner.ukfCvSph->correctStruct.P + dxCv * dxCv.transpose()) +
-              mu_i(0,1) * (converter.m[{typeid(converter.modelCt), typeid(converter.modelCv)}](conteiner.ukfCtSph->correctStruct.P) + dxCt * dxCt.transpose())+
-              mu_i(0,2) * (converter.m[{typeid(converter.modelCa), typeid(converter.modelCv)}](conteiner.ukfCaSph->correctStruct.P) + dxCa * dxCa.transpose());
-
+        for (size_t i = 0; i < conteiner.filters.size(); ++i)
+        {
+            dx = converter.m[{conteiner.filters[i]->getModelType(), typeid(converter.modelCv)}](conteiner.filters[i]->correctStruct.X) - X;
+            M convertedCovariance = converter.m[{conteiner.filters[i]->getModelType(), typeid(converter.modelCv)}](conteiner.filters[i]->correctStruct.P);
+            P += mu_i(0, i) * (convertedCovariance + dx * dx.transpose());
+        }
         return X;
     }
 };
@@ -271,11 +228,13 @@ TEST_CASE("test_imm")
 {
     Eigen::MatrixXd X(6, 1);
     Eigen::MatrixXd Z(3, 1);
+    Eigen::MatrixXd Z1(3, 1);
     Eigen::MatrixXd Q(3, 3);
     Eigen::MatrixXd R(3, 3);
 
     X << 9978.99978886, 0.0, 20033.44840212, 0.0, 10033.56458559, 0.0;
-    Z << 2.44146250e+04, 6.36715510e+01, 2.41279867e+01;                 
+    Z << 2.44146250e+04, 6.36715510e+01, 2.41279867e+01;       
+    Z1 << 2.44146250e+04, 6.36715510e+01, 2.41279867e+01;                
  
     Q << 10.0,0.0,0.0,
         0.0,10.0,0.0,
@@ -305,7 +264,8 @@ TEST_CASE("test_imm")
 
     double dt = 1.0;
     PRINTM(imm.step(Z,dt));
-    PRINTM(imm.step(dt));
+    // PRINTM(imm.step(dt));
+    PRINTM(imm.step(Z1,dt));
     BENCHMARK("imm"){
 
     };

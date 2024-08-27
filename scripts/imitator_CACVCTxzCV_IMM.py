@@ -22,13 +22,13 @@ fig2 = make_subplots(rows=1, cols=1, specs=[[{'type': 'scatter3d'}]])
     
 # ИНИЦИАЛИЗАЦИЯ МОДЕЛИ ДВИЖЕНИЯ
 tg1 = Target()
-# init_state = {'x':100000.0, 'y':20000.0, 'z':10000.0, 'vx':-200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': 19.4}
-init_state = {'x':200000, 'y':20000, 'z':20000, 'vx':200,'vy':0.0,'vz':0.0, 'w':5.5}
+init_state = {'x':100000.0, 'y':20000.0, 'z':10000.0, 'vx':-200.0, 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': 19.4}
+# init_state = {'x':200000, 'y':20000, 'z':20000, 'vx':200,'vy':0.0,'vz':0.0, 'w':5.5}
 tg1.init_state(init_state)
-nCaPitch = 36
-nCv = 300
-nCt = 100
-nCv2 = 200
+nCaPitch = 50
+nCv = 70
+nCt = 70
+# nCv2 = 100
 
 def remove_zero_columns(arr):
 
@@ -51,42 +51,42 @@ def make_pass(X_true_data, pd): #при pd = 1 пропусков не буде�
 def make_true (tg1): 
 
     x1=[];  y1=[]; z1=[]; vx1=[]; vy1=[]; vz1=[]
-    # for i in range(nCaPitch):
-    #     state1 = tg1.CA(dt)
-    #     x1.append(state1['x'])
-    #     vx1.append(state1['vx'])
+    for i in range(nCaPitch):
+        state1 = tg1.CA(dt)
+        x1.append(state1['x'])
+        vx1.append(state1['vx'])
 
-    #     y1.append(state1['y'])
-    #     vy1.append(state1['vy'])
+        y1.append(state1['y'])
+        vy1.append(state1['vy'])
 
-    #     z1.append(state1['z'])
-    #     vz1.append(state1['vz'])
+        z1.append(state1['z'])
+        vz1.append(state1['vz'])
     
-    # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1], 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': 0.0})
+    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1], 'vy':0.0, 'vz':0.0, 'ax': 0.0, 'ay': 0.0, 'az': 0.0})
 
-    # for i in range(nCv):
-    #     state1 = tg1.CV(dt)
-    #     x1.append(state1['x'])
-    #     vx1.append(state1['vx'])
+    for i in range(nCv):
+        state1 = tg1.CV(dt)
+        x1.append(state1['x'])
+        vx1.append(state1['vx'])
 
-    #     y1.append(state1['y'])
-    #     vy1.append(state1['vy'])
+        y1.append(state1['y'])
+        vy1.append(state1['vy'])
 
-    #     z1.append(state1['z'])
-    #     vz1.append(state1['vz'])
+        z1.append(state1['z'])
+        vz1.append(state1['vz'])
 
-    # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'w':5.5})
+    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'w':5.5})
 
-    # for i in range(nCt):
-    #     state1 = tg1.CTxz(dt)
-    #     x1.append(state1['x'])
-    #     vx1.append(state1['vx'])
+    for i in range(nCt):
+        state1 = tg1.CTxz(dt)
+        x1.append(state1['x'])
+        vx1.append(state1['vx'])
 
-    #     y1.append(state1['y'])
-    #     vy1.append(state1['vy'])
+        y1.append(state1['y'])
+        vy1.append(state1['vy'])
 
-    #     z1.append(state1['z'])
-    #     vz1.append(state1['vz'])
+        z1.append(state1['z'])
+        vz1.append(state1['vz'])
 
     # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':200.0, 'vy':0.0, 'vz':-40.0, 'ax': 0.0, 'ay': 0.0, 'az': 0.0})
     # for i in range(nCv2):
@@ -102,67 +102,67 @@ def make_true (tg1):
 
 
     # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'w':5.5})
-    for i in range(nCt):
-        state1 = tg1.CTxz(dt)
-        x1.append(state1['x'])
-        vx1.append(state1['vx'])
+    # for i in range(nCt):
+    #     state1 = tg1.CTxz(dt)
+    #     x1.append(state1['x'])
+    #     vx1.append(state1['vx'])
 
-        y1.append(state1['y'])
-        vy1.append(state1['vy'])
+    #     y1.append(state1['y'])
+    #     vy1.append(state1['vy'])
 
-        z1.append(state1['z'])
-        vz1.append(state1['vz'])
-
-
-    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': 0.0})
-    for i in range(nCv):
-        state1 = tg1.CV(dt)
-        x1.append(state1['x'])
-        vx1.append(state1['vx'])
-
-        y1.append(state1['y'])
-        vy1.append(state1['vy'])
-
-        z1.append(state1['z'])
-        vz1.append(state1['vz'])
+    #     z1.append(state1['z'])
+    #     vz1.append(state1['vz'])
 
 
-    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': -10.0})
-    for i in range(nCaPitch):
-        state1 = tg1.CA(dt)
-        x1.append(state1['x'])
-        vx1.append(state1['vx'])
+    # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': 0.0})
+    # for i in range(nCv):
+    #     state1 = tg1.CV(dt)
+    #     x1.append(state1['x'])
+    #     vx1.append(state1['vx'])
 
-        y1.append(state1['y'])
-        vy1.append(state1['vy'])
+    #     y1.append(state1['y'])
+    #     vy1.append(state1['vy'])
 
-        z1.append(state1['z'])
-        vz1.append(state1['vz'])
+    #     z1.append(state1['z'])
+    #     vz1.append(state1['vz'])
 
 
-    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': 0.0})
-    for i in range(nCv):
-        state1 = tg1.CV(dt)
-        x1.append(state1['x'])
-        vx1.append(state1['vx'])
+    # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': -10.0})
+    # for i in range(nCaPitch):
+    #     state1 = tg1.CA(dt)
+    #     x1.append(state1['x'])
+    #     vx1.append(state1['vx'])
 
-        y1.append(state1['y'])
-        vy1.append(state1['vy'])
+    #     y1.append(state1['y'])
+    #     vy1.append(state1['vy'])
 
-        z1.append(state1['z'])
-        vz1.append(state1['vz'])
+    #     z1.append(state1['z'])
+    #     vz1.append(state1['vz'])
 
-    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': 0.0, 'w': 5.5})
-    for i in range(nCt):
-        state1 = tg1.CTxz(dt)
-        x1.append(state1['x'])
-        vx1.append(state1['vx'])
 
-        y1.append(state1['y'])
-        vy1.append(state1['vy'])
+    # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': 0.0})
+    # for i in range(nCv):
+    #     state1 = tg1.CV(dt)
+    #     x1.append(state1['x'])
+    #     vx1.append(state1['vx'])
 
-        z1.append(state1['z'])
-        vz1.append(state1['vz'])
+    #     y1.append(state1['y'])
+    #     vy1.append(state1['vy'])
+
+    #     z1.append(state1['z'])
+    #     vz1.append(state1['vz'])
+
+    # tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'ax': 0.0, 'ay': 0.0, 'az': 0.0, 'w': 5.5})
+    # for i in range(nCt):
+    #     state1 = tg1.CTxz(dt)
+    #     x1.append(state1['x'])
+    #     vx1.append(state1['vx'])
+
+    #     y1.append(state1['y'])
+    #     vy1.append(state1['vy'])
+
+    #     z1.append(state1['z'])
+    #     vz1.append(state1['vz'])
 
     X_true_data_not_pass = np.array([x1,vx1,y1,vy1,z1,vz1])             
 
