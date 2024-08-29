@@ -10,25 +10,70 @@ struct ConteinerCVCACTxy
 
     std::vector<std::shared_ptr<IFilter<M>>> filters;
 
-    ConteinerCVCACTxy(const M& X, const M& procNoise, const M& measNoise, ParamSigmaPoints paramSigmaPoints)
+    void initConteiner(const M& detectionPoint)
     {
-        M ProcNoiseCT(4, 4);
-        ProcNoiseCT <<   10.0, 0.0, 0.0, 0.0,
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        M X0;
+        M procNoise;
+        M measNoise;
+        ParamSigmaPoints paramSigmaPoints;
+
+        SpMat Hp(3,6);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detectionPoint);
+
+//------------------------------------------------------
+        double process_var;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+//------------------------------------------------------
+        
+
+        process_var = 0.00001;
+        procNoise.resize(3, 3);
+        procNoise <<    process_var, 0.0, 0.0,
+                        0.0, process_var, 0.0,
+                        0.0, 0.0, process_var;
+
+        measNoise.resize(3,3);
+        measNoise <<   pow(sko_range,2),        0.0,                    0.0,
+                            0.0,            pow(sko_Az,2),              0.0,
+                            0.0,                0.0,            pow(sko_Um,2);
+
+        paramSigmaPoints.alpha = 1e-3;
+        paramSigmaPoints.beta = 2.0;
+
+        paramSigmaPoints.kappa = 3.0 - X0.rows();
+        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X0, procNoise, measNoise, paramSigmaPoints);
+
+
+        procNoise.resize (4, 4);
+        procNoise <<    10.0, 0.0, 0.0, 0.0,
                          0.0, 10.0, 0.0, 0.0,
                          0.0, 0.0, 1.0, 0.0,
                          0.0, 0.0, 0.0, 1e-7;
 
-        M ProcNoiseCV(3, 3);
-        ProcNoiseCV <<   0.00001, 0.0, 0.0,
-                         0.0, 0.00001, 0.0,
-                         0.0, 0.0, 0.00001;
+        paramSigmaPoints.kappa = -4.0;
+        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXY, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X0), procNoise, measNoise, paramSigmaPoints);
 
-        // здесь выделяем память. Пока что все вместе: и выделение и инициализация фильтров
-        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X, ProcNoiseCV, measNoise, paramSigmaPoints);
-        paramSigmaPoints.kappa = 3 - 7; //параметр ансцентного преобразования задал вручную для CT. 
-        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXY, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X), ProcNoiseCT, measNoise, paramSigmaPoints);
-        paramSigmaPoints.kappa = 3 - 9; //параметр ансцентного преобразования задал вручную для CA. 
-        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X), procNoise, measNoise, paramSigmaPoints);
+        process_var = 10.0;
+        procNoise.resize(3, 3);
+        procNoise <<    process_var, 0.0, 0.0,
+                        0.0, process_var, 0.0,
+                        0.0, 0.0, process_var;
+
+        paramSigmaPoints.kappa = -6.0;
+        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X0), procNoise, measNoise, paramSigmaPoints);
 
         filters.push_back(ukfCvSph);
         filters.push_back(ukfCtSph);
@@ -46,27 +91,70 @@ struct ConteinerCVCACTxz
 
     std::vector<std::shared_ptr<IFilter<M>>> filters;
 
-    ConteinerCVCACTxz(const M& X, const M& procNoise, const M& measNoise, ParamSigmaPoints paramSigmaPoints)
+        void initConteiner(const M& detectionPoint)
     {
-        M ProcNoiseCT(4, 4);
-        ProcNoiseCT <<   10.0, 0.0, 0.0, 0.0,
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        M X0;
+        M procNoise;
+        M measNoise;
+        ParamSigmaPoints paramSigmaPoints;
+
+        SpMat Hp(3,6);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detectionPoint);
+
+//------------------------------------------------------
+        double process_var;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+//------------------------------------------------------
+        
+
+        process_var = 0.00001;
+        procNoise.resize(3, 3);
+        procNoise <<    process_var, 0.0, 0.0,
+                        0.0, process_var, 0.0,
+                        0.0, 0.0, process_var;
+
+        measNoise.resize(3,3);
+        measNoise <<   pow(sko_range,2),        0.0,                    0.0,
+                            0.0,            pow(sko_Az,2),              0.0,
+                            0.0,                0.0,            pow(sko_Um,2);
+
+        paramSigmaPoints.alpha = 1e-3;
+        paramSigmaPoints.beta = 2.0;
+
+        paramSigmaPoints.kappa = 3.0 - X0.rows();
+        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X0, procNoise, measNoise, paramSigmaPoints);
+
+
+        procNoise.resize (4, 4);
+        procNoise <<    10.0, 0.0, 0.0, 0.0,
                          0.0, 10.0, 0.0, 0.0,
                          0.0, 0.0, 1.0, 0.0,
                          0.0, 0.0, 0.0, 1e-7;
 
-        M ProcNoiseCV(3, 3);
-        ProcNoiseCV <<   1.0, 0.0, 0.0,
-                         0.0, 1.0, 0.0,
-                         0.0, 0.0, 1.0;
+        paramSigmaPoints.kappa = -4.0;
+        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXZ, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X0), procNoise, measNoise, paramSigmaPoints);
 
+        process_var = 10.0;
+        procNoise.resize(3, 3);
+        procNoise <<    process_var, 0.0, 0.0,
+                        0.0, process_var, 0.0,
+                        0.0, 0.0, process_var;
 
-        // здесь выделяем память. Пока что все вместе: и выделение и инициализация фильтров
-        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X, ProcNoiseCV, measNoise, paramSigmaPoints);
-        paramSigmaPoints.kappa = 3 - 7; //параметр ансцентного преобразования задал вручную для CT. 
-        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXZ, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXz)}](X), ProcNoiseCT, measNoise, paramSigmaPoints);
-        paramSigmaPoints.kappa = 3 - 9; //параметр ансцентного преобразования задал вручную для CA. 
-        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X), procNoise, measNoise, paramSigmaPoints);
-
+        paramSigmaPoints.kappa = -6.0;
+        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X0), procNoise, measNoise, paramSigmaPoints);
 
         filters.push_back(ukfCvSph);
         filters.push_back(ukfCtSph);

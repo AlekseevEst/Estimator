@@ -295,7 +295,7 @@ def estimate (Z):
     m_i = np.empty((0, 3))
 
     for i in range (1, Z.shape[1]):
-        print(i)
+   
         m_i = np.append(m_i, track.get_m_i(), axis=0)
         r_meas = Z[0,i]
         az_meas = Z[1,i]

@@ -16,19 +16,12 @@ struct Imm
     M mu_ij; //смешенная вероятность
     M cj;
     
-    Imm(const M& modeProbability, const M& transmitProbability, const M& X, const M& procNoise, const M& measNoise, ParamSigmaPoints paramSigmaPoints ):
-    conteiner(X,procNoise,measNoise,paramSigmaPoints)
-    {
-        mu_i = modeProbability;
-        p_ij = transmitProbability;
-    }
-    // void immInit()
+    Imm(const M& modeProbability, const M& transmitProbability, const ConteinerType<M>& conteiner):
+    conteiner(conteiner), mu_i(modeProbability), p_ij(transmitProbability) {}
 
     M step(const M& Z ,double dt)
     {
-        PRINTM (mu_i);
         mu_ij = computeMixingProbability(p_ij, mu_i);
-        PRINTM(mu_ij);
         std::pair<std::vector<M>,std::vector<M>> stateCovInit = InitMixingStateAndCovariance (mu_ij);
 
         filterStep(Z, stateCovInit,dt);
@@ -79,7 +72,6 @@ struct Imm
         }
         return mix;
     }
-
 
        std::pair<std::vector<M>, std::vector<M>> InitMixingStateAndCovariance(const M &mu_ij)
     {
@@ -151,7 +143,7 @@ struct Imm
 
     }
 
-    M combinationModelCondition(/* Флаг означающий модель вывода состояния*/) // сейчас возвращаяется модель CV
+    M combinationModelCondition(/* Флаг обозначанающий модель вывода состояния*/) // сейчас возвращаяется модель CV
     {
         M X = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());
         M dx = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());

@@ -75,9 +75,7 @@ struct InitUKFStateModelCVMeasureModelSph
                                         0.0,               0.0,              0.0,        pow(sko_Vr,2);
         }
 
-        // P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measurementNoise, detection.point(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0)   // протестить
-        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_AZIM), 0)
-        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_ELEV), 0)),X0.rows());
+
     }
 };
 
@@ -143,10 +141,6 @@ struct InitUKFStateModelCTMeasureModelSph
                                     0.0,         pow(sko_Az,2),              0.0,
                                     0.0,                0.0,            pow(sko_Um,2);
 
-        // P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measurementNoise, detection.point(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0)
-        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_AZIM), 0)
-        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_ELEV), 0)),X0.rows());
-
     }
 };
 
@@ -211,9 +205,6 @@ struct InitUKFStateModelCAMeasureModelSph
 
 
                 
-        // P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measurementNoise, detection.point(ENUM_TO_INT(SphPosMeas::POS_RANGE), 0)
-        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_AZIM), 0)
-        //                                                                 , detection.point(ENUM_TO_INT(SphPosMeas::POS_ELEV), 0)),X0.rows());
     }
 };
 
@@ -222,61 +213,24 @@ template<class M,
          template <typename> class ConteinerType>        
 struct InitUkfImmMeasureModelSph
 {
-    M X0;
-    M P0;
-    M  processNoise;
-    M  measurementNoise;
+    ConteinerType<M> conteiner; 
+    
     M  mu_i;
     M  p_ij;
-    ParamSigmaPoints p;
+    ParamSigmaPoints param;
 
     std::unique_ptr<Imm<M, ConteinerType>> make_estimator()
     {
-        return std::make_unique<Imm<M, ConteinerType>>(mu_i, p_ij, X0, processNoise, measurementNoise, p);
+        return std::make_unique<Imm<M, ConteinerType>>(mu_i, p_ij, conteiner);
     }
 
     void InitializationEstimator(const Detection<M>& detection)
     {
-        typedef Eigen::SparseMatrix<double> SpMat;
-        typedef Eigen::Triplet<double> T;
-
-        SpMat Hp(3,6);
-        std::vector<T> tripletList;
-        tripletList.reserve(3);
-
-        tripletList.push_back(T(0, 0, 1.0));
-        tripletList.push_back(T(1, 2, 1.0));
-        tripletList.push_back(T(2, 4, 1.0));
-        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
-        
-        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
-
-        
-        //-------------------------------------------------------------------------
-        double process_var = 10.0;
-        double sko_range  = 100.0;
-        double sko_Az = 0.1/3.0;
-        double sko_Um = 0.1/3.0;
-        p.alpha = 1e-3;
-        p.beta = 2.0;
-        p.kappa = 3.0 - X0.rows();
-        //-------------------------------------------------------------------------
-     
-        processNoise.resize(3,3);
-        processNoise <<  process_var,            0.0,          0.0,
-                                0.0,        process_var,       0.0,
-                                0.0,             0.0,      process_var;
-
-        
-        measurementNoise.resize(3,3);
-        measurementNoise << pow(sko_range,2),          0.0,                  0.0,
-                                    0.0,         pow(sko_Az,2),              0.0,
-                                    0.0,                0.0,            pow(sko_Um,2);
-
-        mu_i.resize(1,3);                            
+        conteiner.initConteiner(detection.point);
+        mu_i.resize(1,3);     
         mu_i << 1.0/3.0, 1.0/3.0, 1.0/3.0;
 
-        p_ij.resize(3,3);                            
+        p_ij.resize(3,3);                   
         p_ij << 0.97, 0.015, 0.015,
                 0.015, 0.97, 0.015,
                 0.015, 0.015, 0.97;

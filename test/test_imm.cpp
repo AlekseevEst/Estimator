@@ -7,7 +7,7 @@
 using namespace Catch::Benchmark;
 
 template<class M>
-struct ConteinerCVCACT
+struct ConteinerCVCACTxy
 {
     Converter<M> converter;
     std::shared_ptr <IFilter<M>> ukfCvSph;
@@ -16,36 +16,75 @@ struct ConteinerCVCACT
 
     std::vector<std::shared_ptr<IFilter<M>>> filters;
 
-    ConteinerCVCACT(const M& X, const M& procNoise, const M& measNoise, ParamSigmaPoints paramSigmaPoints)
+    void initConteiner(const M& detectionPoint)
     {
-               M ProcNoiseCT(4, 4);
-        ProcNoiseCT <<   10.0, 0.0, 0.0, 0.0,
+        typedef Eigen::SparseMatrix<double> SpMat;
+        typedef Eigen::Triplet<double> T;
+
+        M X0;
+        M procNoise;
+        M measNoise;
+        ParamSigmaPoints paramSigmaPoints;
+
+        SpMat Hp(3,6);
+        std::vector<T> tripletList;
+        tripletList.reserve(3);
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 2, 1.0));
+        tripletList.push_back(T(2, 4, 1.0));
+        Hp.setFromTriplets(tripletList.begin(), tripletList.end());
+        
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detectionPoint);
+
+//------------------------------------------------------
+        double process_var;
+        double sko_range  = 100.0;
+        double sko_Az = 0.1/3.0;
+        double sko_Um = 0.1/3.0;
+//------------------------------------------------------
+        
+
+        process_var = 0.00001;
+        procNoise.resize(3, 3);
+        procNoise <<    process_var, 0.0, 0.0,
+                        0.0, process_var, 0.0,
+                        0.0, 0.0, process_var;
+
+        measNoise.resize(3,3);
+        measNoise <<   pow(sko_range,2),        0.0,                    0.0,
+                            0.0,            pow(sko_Az,2),              0.0,
+                            0.0,                0.0,            pow(sko_Um,2);
+
+        paramSigmaPoints.alpha = 1e-3;
+        paramSigmaPoints.beta = 2.0;
+
+        paramSigmaPoints.kappa = 3.0 - X0.rows();
+        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X0, procNoise, measNoise, paramSigmaPoints);
+
+
+        procNoise.resize (4, 4);
+        procNoise <<    10.0, 0.0, 0.0, 0.0,
                          0.0, 10.0, 0.0, 0.0,
                          0.0, 0.0, 1.0, 0.0,
                          0.0, 0.0, 0.0, 1e-7;
 
-        M ProcNoiseCV(3, 3);
-        ProcNoiseCV <<   0.00001, 0.0, 0.0,
-                         0.0, 0.00001, 0.0,
-                         0.0, 0.0, 0.00001;
+        paramSigmaPoints.kappa = -4.0;
+        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXY, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X0), procNoise, measNoise, paramSigmaPoints);
 
+        process_var = 10.0;
+        procNoise.resize(3, 3);
+        procNoise <<    process_var, 0.0, 0.0,
+                        0.0, process_var, 0.0,
+                        0.0, 0.0, process_var;
 
-        // здесь выделяем память. Пока что все вместе: и выделение и инициализация фильтров
-        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X, ProcNoiseCV, measNoise, paramSigmaPoints);
-        paramSigmaPoints.kappa = 3 - 7; //параметр ансцентного преобразования задал вручную для CT. 
-        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXY, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X), ProcNoiseCT, measNoise, paramSigmaPoints);
-        paramSigmaPoints.kappa = 3 - 9; //параметр ансцентного преобразования задал вручную для CA. 
-        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X), procNoise, measNoise, paramSigmaPoints);
-        
+        paramSigmaPoints.kappa = -6.0;
+        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X0), procNoise, measNoise, paramSigmaPoints);
+
         filters.push_back(ukfCvSph);
         filters.push_back(ukfCtSph);
         filters.push_back(ukfCaSph);
     }
-    // initConteinerCVCACT()
-    // {
-        
-    //     // инициализиция фильтров своим состоянием. ????????
-    // }
 };
 
 
@@ -67,13 +106,8 @@ struct Imm
     M mu_ij; //смешенная вероятность
     M cj;
     
-    Imm(const M& modeProbability, const M& transmitProbability, const M& X, const M& procNoise, const M& measNoise, ParamSigmaPoints paramSigmaPoints ):
-    conteiner(X,procNoise,measNoise,paramSigmaPoints)
-    {
-        mu_i = modeProbability;
-        p_ij = transmitProbability;
-    }
-    // void immInit()
+    Imm(const M& modeProbability, const M& transmitProbability, const ConteinerType<M>& conteiner):
+    conteiner(conteiner), mu_i(modeProbability), p_ij(transmitProbability) {}
 
     M step(const M& Z ,double dt)
     {
@@ -227,14 +261,16 @@ struct Imm
 TEST_CASE("test_imm")
 {
     Eigen::MatrixXd X(6, 1);
+    Eigen::MatrixXd Z0(3, 1);
     Eigen::MatrixXd Z(3, 1);
     Eigen::MatrixXd Z1(3, 1);
     Eigen::MatrixXd Q(3, 3);
     Eigen::MatrixXd R(3, 3);
 
-    X << 9978.99978886, 0.0, 20033.44840212, 0.0, 10033.56458559, 0.0;
-    Z << 2.44146250e+04, 6.36715510e+01, 2.41279867e+01;       
-    Z1 << 2.44146250e+04, 6.36715510e+01, 2.41279867e+01;                
+    
+    Z0 << 2.43146250e+04, 6.30715510e+01, 2.40279867e+01; 
+    Z << 2.44146250e+04, 6.36715510e+01, 2.41279867e+01;      
+    Z1 << 2.45146250e+04, 6.37715510e+01, 2.42279867e+01;                
  
     Q << 10.0,0.0,0.0,
         0.0,10.0,0.0,
@@ -259,8 +295,9 @@ TEST_CASE("test_imm")
             0.015, 0.015,  0.97;
 
 
-
-    Imm<Eigen::MatrixXd, ConteinerCVCACT> imm(mui, Pij, X, Q, R, p);
+    ConteinerCVCACTxy<Eigen::MatrixXd> conteiner;
+    conteiner.initConteiner(Z0);
+    Imm<Eigen::MatrixXd, ConteinerCVCACTxy> imm(mui, Pij, conteiner);
 
     double dt = 1.0;
     PRINTM(imm.step(Z,dt));
