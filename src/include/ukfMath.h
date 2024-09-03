@@ -26,7 +26,6 @@ struct UnscentedKalmanFilterMath
 
     M R_sph_deg;
     M Q;
-    size_t n;
     ParamSigmaPoints paramSigmaPoints;
     SigmaPoints<M> sigmaPoints;
     
@@ -35,24 +34,24 @@ struct UnscentedKalmanFilterMath
 template <class M>
 UnscentedKalmanFilterMath<M>::UnscentedKalmanFilterMath(const M &measNoiseMat, const M &procNoise, ParamSigmaPoints &p)
 {   
-    SigmaPoints<M> sigmaPoints;
+    // SigmaPoints<M> sigmaPoints;
     R_sph_deg = measNoiseMat;
     Q = procNoise; 
     paramSigmaPoints = p;
 }
 
-template <class M>
-M UnscentedKalmanFilterMath<M>::make_P0_cart(const M& X)
-{   
+// template <class M>
+// M UnscentedKalmanFilterMath<M>::make_P0_cart(const M& X)
+// {   
 
-        // M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
-        Measurement measZ0 = Utils<M>::make_Z0(X);
-        int numOfParameters = X.rows();
-        M P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
-        // PRINTM(P0);
-        return P0;
+//         // M R_sph_deg = Utils<M>::RsphRad2RsphDeg(R_sph_rad);
+//         Measurement measZ0 = Utils<M>::make_Z0(X);
+//         int numOfParameters = X.rows();
+//         M P0 = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(R_sph_deg, measZ0.r_meas, measZ0.az_meas, measZ0.um_meas),numOfParameters);
+//         // PRINTM(P0);
+//         return P0;
   
-}
+// }
 
 template <class M>
 M UnscentedKalmanFilterMath<M>::doSigmaVectors(const M& X, const M& P)

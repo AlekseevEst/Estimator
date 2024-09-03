@@ -5,7 +5,7 @@ class BindUkf
 {
 private:
 
-    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurnXY,FuncMeasSphCVCT, FuncControlMatrix_XvXaXYvYaYZvZaZ> ukf;
+    UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurnXY,FuncMeasSph, FuncControlMatrix_XvXaXYvYaYZvZaZ> ukf;
  
 public:
     

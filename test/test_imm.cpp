@@ -60,7 +60,7 @@ struct ConteinerCVCACTxy
         paramSigmaPoints.beta = 2.0;
 
         paramSigmaPoints.kappa = 3.0 - X0.rows();
-        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ>>(X0, procNoise, measNoise, paramSigmaPoints);
+        ukfCvSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstVel, FuncMeasSph, FuncControlMatrix_XvXYvYZvZ>>(X0, procNoise, measNoise, paramSigmaPoints);
 
 
         procNoise.resize (4, 4);
@@ -70,7 +70,7 @@ struct ConteinerCVCACTxy
                          0.0, 0.0, 0.0, 1e-7;
 
         paramSigmaPoints.kappa = -4.0;
-        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXY, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X0), procNoise, measNoise, paramSigmaPoints);
+        ukfCtSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstTurnXY, FuncMeasSph, FuncControlMatrix_XvXYvYZvZW>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCtXy)}](X0), procNoise, measNoise, paramSigmaPoints);
 
         process_var = 10.0;
         procNoise.resize(3, 3);
@@ -79,7 +79,7 @@ struct ConteinerCVCACTxy
                         0.0, 0.0, process_var;
 
         paramSigmaPoints.kappa = -6.0;
-        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X0), procNoise, measNoise, paramSigmaPoints);
+        ukfCaSph = std::make_shared<UnscentedKalmanfilter<M, FuncConstAcceleration, FuncMeasSph, FuncControlMatrix_XvXaXYvYaYZvZaZ>>(converter.m[{typeid(converter.modelCv), typeid(converter.modelCa)}](X0), procNoise, measNoise, paramSigmaPoints);
 
         filters.push_back(ukfCvSph);
         filters.push_back(ukfCtSph);

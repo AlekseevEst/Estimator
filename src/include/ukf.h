@@ -41,19 +41,10 @@ public:
     UnscentedKalmanfilter(const M& X, const M& procNoise, const M& measNoise , ParamSigmaPoints paramSigmaPoints): 
                                                                                                             UKfilterMath(measNoise, procNoise, paramSigmaPoints)    
                                                                                                             {                                                                                                   
-                                                                                                                correctStruct.X = X;
-                                                                                                                correctStruct.P = UKfilterMath.make_P0_cart(X);                                                                                 
+                                                                                                                // correctStruct.X = X;
+                                                                                                                // correctStruct.P = UKfilterMath.make_P0_cart(X);                                                                                 
                                                                                                             }
 };
-// template <class M,
-//           template <typename> class StateFunc,
-//           template <typename> class MeasurementFunc,
-//           template <typename> class ControlFunc>
-
-// void UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::init()
-// {
-// }
-
 
 template <class M,
           template <typename> class StateFunc,
@@ -82,10 +73,8 @@ M UnscentedKalmanfilter<M, StateFunc, MeasurementFunc, ControlFunc>::correct(con
     predictStruct.Pzz = UKfilterMath.doCovMatExtrapolatedMeasVector(extrapolatedMeasSigmaVectors, predictStruct.Ze);
     predictStruct.Se = UKfilterMath.doCovMatInnovation(predictStruct.Pzz);
     predictStruct.K = UKfilterMath.calcGainFilter(extrapolatedStateSigmaVectors, predictStruct.Xe, extrapolatedMeasSigmaVectors,predictStruct.Ze, predictStruct.Se);
-
     correctStruct.X = UKfilterMath.correctState(predictStruct.Xe,Z, predictStruct.Ze, predictStruct.K);
     correctStruct.P = UKfilterMath.correctCov(predictStruct.Pe, predictStruct.K, predictStruct.Se);
-
 
     return correctStruct.X;
 }

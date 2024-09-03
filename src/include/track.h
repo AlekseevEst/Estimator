@@ -40,7 +40,7 @@ struct InitUKFStateModelCVMeasureModelSph
         tripletList.push_back(T(2, 4, 1.0));
         Hp.setFromTriplets(tripletList.begin(), tripletList.end());
         
-        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.measurement);
         
         //-------------------------------------------------------------------------
         double process_var = 0.00001;
@@ -59,7 +59,7 @@ struct InitUKFStateModelCVMeasureModelSph
                                 0.0,             0.0,      process_var;
 
         
-        if (detection.point.rows() == 3)
+        if (detection.measurement.rows() == 3)
         {
             measurementNoise.resize(3,3);
             measurementNoise << pow(sko_range,2),          0.0,                  0.0,
@@ -117,7 +117,7 @@ struct InitUKFStateModelCTMeasureModelSph
         tripletList.push_back(T(2, 4, 1.0));
         Hp.setFromTriplets(tripletList.begin(), tripletList.end());
         
-        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.measurement);
         
         //-------------------------------------------------------------------------
         double process_var = 10.0;
@@ -179,7 +179,7 @@ struct InitUKFStateModelCAMeasureModelSph
         tripletList.push_back(T(2, 6, 1.0));
         Hp.setFromTriplets(tripletList.begin(), tripletList.end());
         
-        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.point);
+        X0 = Hp.transpose() * Utils<M>::sph2CartMeas(detection.measurement);
 
         
         //-------------------------------------------------------------------------
@@ -226,7 +226,7 @@ struct InitUkfImmMeasureModelSph
 
     void InitializationEstimator(const Detection<M>& detection)
     {
-        conteiner.initConteiner(detection.point);
+        conteiner.initConteiner(detection.measurement);
         mu_i.resize(1,3);     
         mu_i << 1.0/3.0, 1.0/3.0, 1.0/3.0;
 
@@ -251,15 +251,15 @@ public:
         TypeEstimatorInit estimatorInit;
         estimatorInit.InitializationEstimator(detection);
         estimator = estimatorInit.make_estimator();
-        timePoint = detection.timePoint;
+        timePoint = detection.time;
     }
     M step(const Detection<M> &detection)
     {
         try
         {   
-            double dt = detection.timePoint - timePoint;
-            timePoint = detection.timePoint;
-            return estimator->step(detection.point, dt);
+            double dt = detection.time - timePoint;
+            timePoint = detection.time;
+            return estimator->step(detection.measurement, dt);
         }
         catch (const std::runtime_error &e)
         {

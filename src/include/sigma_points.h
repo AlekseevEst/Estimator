@@ -2,7 +2,6 @@
 #include "utils.h"
 #include <vector>
 
-
 template <class M>
 struct SigmaPoints
 {

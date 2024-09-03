@@ -1,39 +1,40 @@
-#include "bind_track.h"
-namespace py = pybind11;
+// #include "bind_track.h"
+// namespace py = pybind11;
 
-class BindTrackUkf_CA
-{
-private:
-    Track<Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>,
-          InitUKFStateModelCAMeasureModelSph<Eigen::MatrixXd, FuncConstAcceleration,
-                                             FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>
-        track;
+// class BindTrackUkf_CA
+// {
+// private:
+//     Track<Eigen::MatrixXd, UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>,
+//           InitUKFStateModelCAMeasureModelSph<Eigen::MatrixXd, FuncConstAcceleration,
+//                                              FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ>>
+//         track;
 
-public:
+// public:
 
-    BindTrackUkf_CA(const Detection<Eigen::MatrixXd>& detection):track(detection){}
+//     BindTrackUkf_CA(const Detection<Eigen::MatrixXd>& detection):track(detection){}
 
-    Eigen::MatrixXd step(const Detection<Eigen::MatrixXd>& detection)
-    {
-        return track.step(detection);
-    }
+//     Eigen::MatrixXd step(const Detection<Eigen::MatrixXd>& detection)
+//     {
+//         return track.step(detection);
+//     }
 
-    Eigen::MatrixXd step(double dt)
-    {
-        return track.step(dt);
-    }
-};
+//     Eigen::MatrixXd step(double dt)
+//     {
+//         return track.step(dt);
+//     }
+// };
 
-void bind_track_CA(pybind11::module &m)
-{
-    py::class_<BindTrackUkf_CA>(m, "BindTrackUkf_CA")
-        .def(py::init<const Detection<Eigen::MatrixXd>&>())
-        .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(const Detection<Eigen::MatrixXd>&)) & BindTrackUkf_CA::step)
-        .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(double)) & BindTrackUkf_CA::step);
+// void bind_track_CA(pybind11::module &m)
+// {
+//     py::class_<BindTrackUkf_CA>(m, "BindTrackUkf_CA")
+//         .def(py::init<const Detection<Eigen::MatrixXd>&>())
+//         .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(const Detection<Eigen::MatrixXd>&)) & BindTrackUkf_CA::step)
+//         .def("step", (Eigen::MatrixXd(BindTrackUkf_CA::*)(double)) & BindTrackUkf_CA::step);
 
-    py::class_<Detection<Eigen::MatrixXd>>(m, "Detection")
-        .def(py::init<>())
-        .def_readwrite("point", &Detection<Eigen::MatrixXd>::point)
-        .def_readwrite("timePoint", &Detection<Eigen::MatrixXd>::timePoint);
+//     py::class_<Detection<Eigen::MatrixXd>>(m, "Detection")
+//         .def(py::init<>())
+//         .def_readwrite("time", &Detection<double>::time)
+//         .def_readwrite("measurement", &Detection<Eigen::MatrixXd>::measurement)
+//         .def_readwrite("measurementNoise", &Detection<Eigen::MatrixXd>::measurementNoise);
 
-}
+// }

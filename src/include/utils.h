@@ -12,9 +12,8 @@ public:
 
     static M rot_Z(const double &val);
     static M rot_Y(const double &val);
-    static std::pair<M, M> sph2cartcov(const M &sphCov, const double &r, const double &az, const double &el);
+    static std::pair<M, M> sph2cartcov(const M &sphCov, const M& Z);
     static M do_cart_P0(std::pair<M, M> cartCov, int numOfParameters);
-    static M doMatrixNoiseProc_Q(M procVar, double T, int size);
     static Measurement make_Z0(const M &X);
     // static M RsphRad2RsphDeg(const M &R);
     static double ComputeAngleDifference(double angle1, double angle2);
@@ -24,6 +23,8 @@ public:
     static M sph2CartMeas(const M& Z);
     static double deg2rad(double val);
     static bool isPositiveDefinite(const M& matrix);
+
+
 
 private:
 };
@@ -122,7 +123,7 @@ M Utils<M>::rot_Y(const double &val)
     return R;
 }
 template <class M>
-std::pair<M, M> Utils<M>::sph2cartcov(const M &sphCov, const double &r, const double &az, const double &el)
+std::pair<M, M> Utils<M>::sph2cartcov(const M &sphCov, const M& Z)
 {
     double rngSig = sqrt(sphCov(0, 0));
     double azSig = sqrt(sphCov(1, 1));
@@ -130,10 +131,10 @@ std::pair<M, M> Utils<M>::sph2cartcov(const M &sphCov, const double &r, const do
 
     M Rpos (ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL3));
     Rpos << pow(rngSig, 2.0), 0.0, 0.0,
-        0.0, pow(r * cos(el * (M_PI / 180.0)) * azSig * (M_PI / 180.0), 2.0), 0.0,
-        0.0, 0.0, pow(r * elSig * (M_PI / 180.0), 2.0);
+        0.0, pow(ENUM_TO_INT(SphPosMeas::POS_RANGE) * cos(ENUM_TO_INT(SphPosMeas::POS_ELEV) * (M_PI / 180.0)) * azSig * (M_PI / 180.0), 2.0), 0.0,
+        0.0, 0.0, pow(ENUM_TO_INT(SphPosMeas::POS_RANGE) * elSig * (M_PI / 180.0), 2.0);
 
-    M rot = rot_Z(az) * rot_Y(el).transpose();
+    M rot = rot_Z(ENUM_TO_INT(SphPosMeas::POS_AZIM)) * rot_Y(ENUM_TO_INT(SphPosMeas::POS_ELEV)).transpose();
     M posCov = rot * Rpos * rot.transpose();
     M velCov = M::Zero(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL3));
     
@@ -203,52 +204,6 @@ M Utils<M>::do_cart_P0(std::pair<M, M> cartCov, int numOfParameters)
     }
     return P;
 }
-
-// template <class M>
-// M Utils<M>::doMatrixNoiseProc_Q(M Q, double T, int size)
-// {
-//     if (size == ENUM_TO_INT(SizeMat::ROW6))
-//     {
-//         M G(ENUM_TO_INT(SizeMat::ROW6), ENUM_TO_INT(SizeMat::COL3));
-//         G << (T * T) / 2.0,          0.0,            0.0,
-//                     T,               0.0,            0.0,
-//                    0.0,         (T * T) / 2.0,       0.0,
-//                    0.0,               T,             0.0,
-//                    0.0,              0.0,       (T * T) / 2.0,
-//                    0.0,              0.0,             T;
-//         M Qp = G * Q * G.transpose();
-//         return Qp;
-//     }
-//     if (size == ENUM_TO_INT(SizeMat::ROW7))
-//     {
-//     M G(ENUM_TO_INT(SizeMat::ROW7), ENUM_TO_INT(SizeMat::COL4));
-//     G << (T * T) / 2.0,      0.0,               0.0,          0.0,
-//                T,            0.0,               0.0,          0.0,
-//               0.0,      (T * T) / 2.0,          0.0,          0.0,
-//               0.0,            T,                0.0,          0.0,
-//               0.0,           0.0,          (T * T) / 2.0,     0.0,
-//               0.0,           0.0,                T,           0.0,
-//               0.0,           0.0,               0.0,          1.0;
-
-//     M Qp = G * Q * G.transpose();
-//     return Qp;
-//     }
-
-//     M G(ENUM_TO_INT(SizeMat::ROW9), ENUM_TO_INT(SizeMat::COL3));
-//     G << (T * T) / 2.0,      0.0,               0.0,
-//                T,            0.0,               0.0,
-//               1.0,           0.0,               0.0,         
-//               0.0,      (T * T) / 2.0,          0.0,         
-//               0.0,            T,                0.0,
-//               0.0,           1.0,               0.0,         
-//               0.0,           0.0,          (T * T) / 2.0,    
-//               0.0,           0.0,                T,          
-//               0.0,           0.0,               1.0;
-
-//     M Qp = G * Q * G.transpose();
-//     // PRINTM(Qp);
-//     return Qp;
-// }
 
 template <class M>
 Measurement Utils<M>::make_Z0(const M &X)
