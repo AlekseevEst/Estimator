@@ -18,8 +18,9 @@ struct FuncConstVel
     M operator()(const M &Xu, double T)
     {
 
-        if (Xu.rows() != ENUM_TO_INT(VelPos::SIZE) || Xu.cols() != 1)
+        if (Xu.rows() != ENUM_TO_INT(VelPos::SIZE))
         {
+            PRINTM(Xu.cols());
             throw std::invalid_argument("Xu.rows() != ENUM_TO_INT(VelPos::SIZE)  Xu.cols() != 1");
         }
 
@@ -63,7 +64,7 @@ struct FuncConstTurnXY
 
     M operator()(M &Xu, double T)
     {
-        if (Xu.rows() != ENUM_TO_INT(TurnPos::SIZE) || Xu.cols() != 1)
+        if (Xu.rows() != ENUM_TO_INT(TurnPos::SIZE))
         {
             throw std::invalid_argument("Xu.rows() != ENUM_TO_INT(TurnPos::SIZE)  Xu.cols() != 1");
         }
@@ -112,7 +113,7 @@ struct FuncConstTurnXZ
     M operator()(M &Xu, double T)
     {
 
-        if (Xu.rows() != ENUM_TO_INT(TurnPos::SIZE) || Xu.cols() != 1)
+        if (Xu.rows() != ENUM_TO_INT(TurnPos::SIZE))
         {
             throw std::invalid_argument("Xu.rows() != ENUM_TO_INT(TurnPos::SIZE)  Xu.cols() != 1");
         }
@@ -164,7 +165,7 @@ struct FuncConstAcceleration
 
     M operator()(M &Xu, double T)
     {
-        if (Xu.rows() != ENUM_TO_INT(AccPos::SIZE) || Xu.cols() != 1)
+        if (Xu.rows() != ENUM_TO_INT(AccPos::SIZE))
         {
             throw std::invalid_argument("Xu.rows() != ENUM_TO_INT(AccPos::SIZE)  Xu.cols() != 1");
         }
@@ -247,9 +248,9 @@ struct FuncMeasSph
     M operator()(const M &Xue, const M &Z)
     {
 
-        if (Xue.rows() != ENUM_TO_INT(VelPos::SIZE) || Xue.rows() != ENUM_TO_INT(TurnPos::SIZE) || Xue.rows() != ENUM_TO_INT(AccPos::SIZE) || Z.rows() != ENUM_TO_INT(MeasPos::SIZE))
+        if (Xue.rows() != ENUM_TO_INT(VelPos::SIZE) && Xue.rows() != ENUM_TO_INT(TurnPos::SIZE) && Xue.rows() != ENUM_TO_INT(AccPos::SIZE) && Z.rows() != ENUM_TO_INT(MeasPos::SIZE))
         {
-            throw std::invalid_argument("Xue.rows() != VelPos::SIZE || Xue.rows() != TurnPos::SIZE|| Xue.rows() != AccPos::SIZE || Z.rows() != MeasPos::SIZE");
+            throw std::invalid_argument("Xue.rows() != VelPos::SIZE && Xue.rows() != TurnPos::SIZE && Xue.rows() != AccPos::SIZE && Z.rows() != MeasPos::SIZE");
         }
 
         M Zue(Z.rows(), Xue.cols());
@@ -346,9 +347,9 @@ struct FuncMeasSphVr
     M operator()(const M &Xue, const M &Z)
     {
 
-        if (Xue.rows() != ENUM_TO_INT(VelPos::SIZE) || Xue.rows() != ENUM_TO_INT(TurnPos::SIZE) || Xue.rows() != ENUM_TO_INT(AccPos::SIZE) || Z.rows() != ENUM_TO_INT(MeasVrPos::SIZE))
+        if (Xue.rows() != ENUM_TO_INT(VelPos::SIZE) && Xue.rows() != ENUM_TO_INT(TurnPos::SIZE) && Xue.rows() != ENUM_TO_INT(AccPos::SIZE) && Z.rows() != ENUM_TO_INT(MeasVrPos::SIZE))
         {
-            throw std::invalid_argument("Xue.rows() != VelPos::SIZE || Xue.rows() != TurnPos::SIZE|| Xue.rows() != AccPos::SIZE || Z.rows() != MeasVrPos::SIZE");
+            throw std::invalid_argument("Xue.rows() != VelPos::SIZE && Xue.rows() != TurnPos::SIZE && Xue.rows() != AccPos::SIZE && Z.rows() != MeasVrPos::SIZE");
         }
 
         M Zue(Z.rows(), Xue.cols());

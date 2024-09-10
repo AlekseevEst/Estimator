@@ -6,6 +6,7 @@ struct Predict
     M Xe;
     M Pe;
     M Pzz;
+    M Pxz;
     M Se; 
 
     M Ze;
@@ -39,15 +40,15 @@ struct ParamSigmaPoints
 //     //M SKO_measurement;
 // };
 
-template <class M>
-struct Detection {
-    double time;
-    M measurement;
-    M measurementNoise;
-    struct DetectionParams {
-        /*
-            ....
-        */
-    };
-    DetectionParams params;
-};
+// template <class M>
+// struct Detection {
+//     double time;
+//     M measurement;
+//     M measurementNoise;
+//     struct DetectionParams {
+//         /*
+//             ....
+//         */
+//     };
+//     DetectionParams params;
+// };

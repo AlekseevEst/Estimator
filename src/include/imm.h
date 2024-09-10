@@ -143,7 +143,7 @@ struct Imm
 
     }
 
-    M combinationModelCondition(/* Флаг обозначанающий модель вывода состояния*/) // сейчас возвращаяется модель CV
+    M combinationModelCondition() // сейчас возвращаяется модель CV
     {
         M X = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());
         M dx = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());

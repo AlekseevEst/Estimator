@@ -131,10 +131,10 @@ std::pair<M, M> Utils<M>::sph2cartcov(const M &sphCov, const M& Z)
 
     M Rpos (ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL3));
     Rpos << pow(rngSig, 2.0), 0.0, 0.0,
-        0.0, pow(ENUM_TO_INT(SphPosMeas::POS_RANGE) * cos(ENUM_TO_INT(SphPosMeas::POS_ELEV) * (M_PI / 180.0)) * azSig * (M_PI / 180.0), 2.0), 0.0,
-        0.0, 0.0, pow(ENUM_TO_INT(SphPosMeas::POS_RANGE) * elSig * (M_PI / 180.0), 2.0);
+        0.0, pow(Z(ENUM_TO_INT(SphPosMeas::POS_RANGE),0) * cos(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0) * (M_PI / 180.0)) * azSig * (M_PI / 180.0), 2.0), 0.0,
+        0.0, 0.0, pow(Z(ENUM_TO_INT(SphPosMeas::POS_RANGE),0) * elSig * (M_PI / 180.0), 2.0);
 
-    M rot = rot_Z(ENUM_TO_INT(SphPosMeas::POS_AZIM)) * rot_Y(ENUM_TO_INT(SphPosMeas::POS_ELEV)).transpose();
+    M rot = rot_Z(Z(ENUM_TO_INT(SphPosMeas::POS_AZIM),0)) * rot_Y(Z(ENUM_TO_INT(SphPosMeas::POS_ELEV),0)).transpose();
     M posCov = rot * Rpos * rot.transpose();
     M velCov = M::Zero(ENUM_TO_INT(SizeMat::ROW3), ENUM_TO_INT(SizeMat::COL3));
     
