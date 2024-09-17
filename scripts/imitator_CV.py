@@ -147,10 +147,12 @@ def estimate (Z):
     
     meas = np.array([[r_meas],[az_meas],[um_meas]])
 
-    detection.point = meas
-    detection.timePoint = dt
+    detection.measurement = meas
+    detection.time = dt
+    detection.measurementNoise = R_without_vr
 
-    track = estimator.BindTrackUkf_CV(detection) #инициал. трассы
+    track = estimator.BindTrackUkf_CV()
+    track.init(detection) #инициал. трассы
     X_c = np.empty((6, 0))
 
     for i in range (1, Z.shape[1]):
@@ -160,11 +162,11 @@ def estimate (Z):
         um_meas = Z[2,i]
         meas = ([[r_meas],[az_meas],[um_meas]])
 
-        detection.point = meas
-        detection.timePoint = (i * dt) + dt
+        detection.measurement = meas
+        detection.time = (i * dt) + dt
 
         if np.all(Z[:,i] == 0):
-            X = track.step(detection.timePoint)
+            X = track.step(detection.time)
             X_c = np.append(X_c,X,axis=1)
             continue
         # print('Z=',Z[:,i])
@@ -186,10 +188,12 @@ def estimate_with_vr (Zvr):
     
     meas = np.array([[r_meas],[az_meas],[um_meas],[Vr_meas]])
 
-    detection.point = meas
-    detection.timePoint = dt
+    detection.measurement = meas
+    detection.time = dt
+    detection.measurementNoise = R_with_vr
 
-    track = estimator.BindTrackUkf_CV(detection) #инициал. трассы
+    track = estimator.BindTrackUkf_CV()
+    track.init(detection) #инициал. трассы
     X_c = np.empty((6, 0))
 
     for i in range (1, Zvr.shape[1]):
@@ -200,12 +204,12 @@ def estimate_with_vr (Zvr):
         Vr_meas = Zvr[3,i]
         meas = ([[r_meas],[az_meas],[um_meas], [Vr_meas]])
 
-        detection.point = meas
-        detection.timePoint = (i * dt) + dt
+        detection.measurement = meas
+        detection.time = (i * dt) + dt
 
 
         if np.all(Zvr[:,i] == 0):
-            X = track.step(detection.timePoint)
+            X = track.step(detection.time)
             X_c = np.append(X_c,X,axis=1)
             continue
         # print('Zvr=',Zvr[:,i])

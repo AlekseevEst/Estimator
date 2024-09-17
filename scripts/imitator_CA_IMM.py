@@ -184,27 +184,28 @@ def estimate (Z):
     
     meas = np.array([[r_meas],[az_meas],[um_meas]])
 
-    detection.point = meas
-    detection.timePoint = dt
+    detection.measurement = meas
+    detection.time = dt
+    detection.measurementNoise = R
    
-    track = estimator.BindTrackUkfImm_ConteinerCVCACTxy(detection) #инициал. трассы
-    
+    track = estimator.BindTrackUkfImm_CVCTxyCA() #инициал. трассы
+    track.init(detection)
     X_c = np.empty((6, 0))
-    m_i = np.empty((0, 3))
+    # m_i = np.empty((0, 3))
 
     for i in range (1, Z.shape[1]):
 
-        m_i = np.append(m_i, track.get_m_i(), axis=0)
+        # m_i = np.append(m_i, track.get_m_i(), axis=0)
         r_meas = Z[0,i]
         az_meas = Z[1,i]
         um_meas = Z[2,i]
         meas = ([[r_meas],[az_meas],[um_meas]])
 
-        detection.point = meas
-        detection.timePoint = (i * dt) + dt
+        detection.measurement = meas
+        detection.time = (i * dt) + dt
         
         if np.all(Z[:,i] == 0):
-            X = track.step(detection.timePoint)
+            X = track.step(detection.time)
             X_c = np.append(X_c,X,axis=1)
             continue
         print('Z=',Zsph2cart(Z[:,i]))
@@ -217,11 +218,11 @@ def estimate (Z):
         X_c = np.append(X_c,X,axis=1)
         # print('Xc=',X_c)
     print("X_Estimeted=",X_c)
-    print ('m_i=',m_i)
+    # print ('m_i=',m_i)
         
-    return X_c, m_i 
+    return X_c
 
-X_c, m_i = estimate(Z)
+X_c = estimate(Z)
 
 # print("X_Estimeted=",X_c)
 
@@ -242,11 +243,11 @@ plt.plot(X_true_plus_ProcNoise[0],X_true_plus_ProcNoise[3], label='truth', marke
 plt.plot(Zc[0], Zc[1], label='Meas',marker='o')
 plt.legend()
 
-plt.figure()
-plt.plot((np.arange(len(m_i[:, 0]))+1)*dt, m_i[:,0], label='m_i_CV', marker='o')
-plt.plot((np.arange(len(m_i[:, 0]))+1)*dt,m_i[:,1], label='m_i_CT', marker='x')
-plt.plot((np.arange(len(m_i[:, 0]))+1)*dt, m_i[:,2], label='m_i_CA',marker='o')
-plt.legend()
+# plt.figure()
+# plt.plot((np.arange(len(m_i[:, 0]))+1)*dt, m_i[:,0], label='m_i_CV', marker='o')
+# plt.plot((np.arange(len(m_i[:, 0]))+1)*dt,m_i[:,1], label='m_i_CT', marker='x')
+# plt.plot((np.arange(len(m_i[:, 0]))+1)*dt, m_i[:,2], label='m_i_CA',marker='o')
+# plt.legend()
 
 # # # ================= Блок 5 ===================
 # # СБОР СТАТИСТИКИ
@@ -255,7 +256,7 @@ def calc_err(X):
     Xn = add_process_noise(X, Q)
     X_pass, pass_id = make_pass(Xn,pd)
     Zn = do_measurement(X_pass, R, pass_id)
-    X_c, m_i = estimate(Zn)
+    X_c = estimate(Zn)
 
     Xn = np.delete(Xn,2, axis=0)    # удаляем строки с ускорением
     Xn = np.delete(Xn,4, axis=0)

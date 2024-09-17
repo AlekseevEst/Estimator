@@ -199,6 +199,72 @@ struct FuncConstAcceleration
 };
 
 template <class M>
+struct FuncBalreentry
+{
+    enum class BalPos
+    {
+        POS_X = 0,
+        POS_VX,
+        POS_Y,
+        POS_VY,
+        POS_Z,
+        POS_VZ,
+        POS_BALCOEFF,
+        SIZE
+    };
+
+    int px = ENUM_TO_INT(BalPos::POS_X),
+        pvx = ENUM_TO_INT(BalPos::POS_VX),
+        py = ENUM_TO_INT(BalPos::POS_Y),
+        pvy = ENUM_TO_INT(BalPos::POS_VY),
+        pz = ENUM_TO_INT(BalPos::POS_Z),
+        pvz = ENUM_TO_INT(BalPos::POS_VZ),
+        pb = ENUM_TO_INT(BalPos::POS_BALCOEFF);
+
+    M operator()(M &Xu, double T)
+    {
+        
+        double dt2 = std::pow(T, 2.0) * 0.5;
+        double adt = std::abs(T);
+        size_t numCols = Xu.cols();
+        M out(Xu.rows(), Xu.cols());
+        double b0 = 1.29;       // плотность воздуха на поверхности земли
+        double H0 = 7100;       // масштабирующий коэффициент
+        double Gm0 = 3.9860e14; // гравитационный параметер
+        double R0 = 6371e3;     // радиус земли
+        double coef = 1e-4;     
+
+        M stateCol = Xu;
+        PRINTM(stateCol);
+        for (int i = 0; i < numCols; i++)
+        {
+            stateCol(pz, i) = stateCol(pz, i) + R0;
+
+            double R = std::sqrt(std::pow(stateCol(px, i), 2.0) + std::pow(stateCol(py, i), 2.0) + std::pow(stateCol(pz, i), 2.0));    // 0 в центре земли в м.
+            double V = std::sqrt(std::pow(stateCol(pvx, i), 2.0) + std::pow(stateCol(pvy, i), 2.0) + std::pow(stateCol(pvz, i), 2.0)); // путевая скорость м/c
+
+            double b = b0 * exp((R0 - R) / H0);               // плотность воздуха
+            double D = -0.5 * b * stateCol(pb, i) * V * coef; // сопротивление воздуха
+            double G = -Gm0 / std::pow(R, 3.0);
+
+            out(px, i) = stateCol(px, i) + T * stateCol(pvx, i) + dt2 * (D * stateCol(pvx, i) + G * stateCol(px, i));// + dt2 * wcol(x, i);
+            out(pvx, i) = stateCol(pvx, i) + T * (D * stateCol(pvx, i) + G * stateCol(px, i));// + adt * wcol(x, i);
+            out(py, i) = stateCol(py, i) + T * stateCol(pvy, i) + dt2 * (D * stateCol(pvy, i) + G * stateCol(py, i));// + dt2 * wcol(xy, i);
+            out(pvy, i) = stateCol(pvy, i) + T * (D * stateCol(pvy, i) + G * stateCol(py, i));// + adt * wcol(xy, i);
+            out(pb, i) = stateCol(pb, i); // + adt * wcol(xyz, i);
+            out(pz, i) = stateCol(pz, i) + T * stateCol(pvz, i) + dt2 * (D * stateCol(pvz, i) + G * stateCol(pz, i)) - R0;// + dt2 * wcol(xyz + 1, i);
+            out(pvz, i) = stateCol(pvz, i) + T * (D * stateCol(pvz, i) + G * stateCol(pz, i));// + adt * wcol(xyz + 1, i);
+        }
+        PRINTM(out);
+        return out;
+    }
+        int getSize()
+    {
+        return ENUM_TO_INT(BalPos::SIZE);
+    }
+};
+
+template <class M>
 struct FuncMeasSph
 {
     enum class VelPos
@@ -485,6 +551,49 @@ struct FuncControlMatrix_XvXYvYZvZW
         return std::make_pair(ENUM_TO_INT(TurnPos::SIZE), ENUM_TO_INT(Pos::SIZE));
     }
 };
+
+template <class M>
+struct FuncControlMatrix_XvXYvYZvZBal
+{
+    enum class Bal
+    {
+        POS_X = 0,
+        POS_VX,
+        POS_Y,
+        POS_VY,
+        POS_Z,
+        POS_VZ,
+        POS_BALCOEFF,
+        SIZE
+    };
+    enum class Pos
+    {
+        X = 0,
+        Y,
+        Z,
+        OMEGA,
+        SIZE
+    };
+
+    M operator()(double T)
+    {
+        M G(ENUM_TO_INT(Bal::SIZE), ENUM_TO_INT(Pos::SIZE));
+        G << (T * T) / 2.0, 0.0, 0.0, 0.0,
+            T, 0.0, 0.0, 0.0,
+            0.0, (T * T) / 2.0, 0.0, 0.0,
+            0.0, T, 0.0, 0.0,
+            0.0, 0.0, (T * T) / 2.0, 0.0,
+            0.0, 0.0, T, 0.0,
+            0.0, 0.0, 0.0, T;
+        return G;
+    }
+
+    std::pair<int, int> getSize()
+    {
+        return std::make_pair(ENUM_TO_INT(Bal::SIZE), ENUM_TO_INT(Pos::SIZE));
+    }
+};
+
 template <class M>
 struct FuncControlMatrix_XvXaXYvYaYZvZaZ
 {
@@ -512,18 +621,77 @@ struct FuncControlMatrix_XvXaXYvYaYZvZaZ
     {
         M G(ENUM_TO_INT(AccPos::SIZE), ENUM_TO_INT(Pos::SIZE));
         G << (T * T) / 2.0, 0.0, 0.0,
-            T, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            0.0, (T * T) / 2.0, 0.0,
-            0.0, T, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 0.0, (T * T) / 2.0,
-            0.0, 0.0, T,
-            0.0, 0.0, 1.0;
+                         T, 0.0, 0.0,
+                       1.0, 0.0, 0.0,
+                       0.0, (T * T) / 2.0, 0.0,
+                       0.0, T, 0.0,
+                        0.0, 1.0, 0.0,
+                       0.0, 0.0, (T * T) / 2.0,
+                       0.0, 0.0, T,
+                       0.0, 0.0, 1.0;
         return G;
     }
     std::pair<int, int> getSize()
     {
         return std::make_pair(ENUM_TO_INT(AccPos::SIZE), ENUM_TO_INT(Pos::SIZE));
     }
+
+    
 };
+
+
+
+// template <class M>
+// M balreentry (const M& state,
+//             //   const M& w,
+//               const double dt) {
+
+//     double dt2 = std::pow(dt, 2.0)*0.5;
+//     double adt = std::abs(dt);
+//     //int numStates = Utils::Size(state, 1);
+//     size_t numCols = Utils::Size(state, 2);
+//     M wcol = w;
+
+//     M out = Utils::zeros(Utils::Size(state));
+
+//     size_t x   = size_t(TypeCartesianSystem::X),
+//            xy  = size_t(TypeCartesianSystem::XY),
+//            xyz = size_t(TypeCartesianSystem::XYZ);
+
+//     size_t px  = size_t(BalPos::POS_X ),
+//            pvx = size_t(BalPos::POS_VX),
+//            py  = size_t(BalPos::POS_Y ),
+//            pvy = size_t(BalPos::POS_VY),
+//            pz  = size_t(BalPos::POS_Z ),
+//            pvz = size_t(BalPos::POS_VZ),
+//            pb  = size_t(BalPos::POS_BALCOEFF);
+
+//     double b0   = 1.29;      // плотность воздуха на поверхности земли
+//     double H0   = 7100;      // масштабирующий коэффициент
+//     double Gm0  = 3.9860e14; // гравитационный параметер
+//     double R0   = 6371e3;    // радиус земли
+//     double coef = 1e-4;
+
+//     M stateCol = state;
+
+//     for (size_t i=0; i<numCols; i++) {
+//         stateCol(pz, i) = stateCol(pz, i) + R0;
+
+//         double R = std::sqrt(std::pow(stateCol(px,i), 2.0) + std::pow(stateCol(py,i), 2.0) + std::pow(stateCol(pz,i), 2.0)); // 0 в центре земли в м.
+//         double V = std::sqrt(std::pow(stateCol(pvx,i), 2.0) + std::pow(stateCol(pvy,i), 2.0) + std::pow(stateCol(pvz,i), 2.0)); // путевая скорость м/c
+
+//         double b = b0 * exp((R0-R)/H0); // плотность воздуха
+//         double D = -0.5 * b * stateCol(pb, i) * V * coef; // сопротивление воздуха
+//         double G = -Gm0 / std::pow(R, 3.0);
+
+//         out(px,i) = stateCol(px,i)  + dt*stateCol(pvx,i) + dt2*( D*stateCol(pvx,i) + G*stateCol(px,i)) + dt2*wcol(x,i);
+//         out(pvx,i)= stateCol(pvx,i) + dt*(D*stateCol(pvx,i) + G*stateCol(px,i)) + adt*wcol(x,i);
+//         out(py,i) = stateCol(py,i)  + dt*stateCol(pvy,i) + dt2*( D*stateCol(pvy,i) + G*stateCol(py,i)) + dt2*wcol(xy,i);
+//         out(pvy,i)= stateCol(pvy,i) + dt*(D*stateCol(pvy,i) + G*stateCol(py,i)) + adt*wcol(xy,i);
+//         out(pb,i) = stateCol(pb,i)  + adt*wcol(xyz, i);
+//         out(pz,i) = stateCol(pz,i)  + dt*stateCol(pvz,i) + dt2*( D*stateCol(pvz,i) + G*stateCol(pz,i) ) + dt2*wcol(xyz+1,i) - R0;
+//         out(pvz,i)= stateCol(pvz,i) + dt*(D*stateCol(pvz,i) + G*stateCol(pz,i)) + adt*wcol(xyz+1,i);
+//     }
+
+//     return out;
+// }

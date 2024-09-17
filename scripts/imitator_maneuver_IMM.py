@@ -221,10 +221,12 @@ def estimate (Z):
     
     meas = np.array([[r_meas],[az_meas],[um_meas]])
 
-    detection.point = meas
-    detection.timePoint = dt
+    detection.measurement = meas
+    detection.time = dt
+    detection.measurementNoise = R
    
-    track = estimator.BindTrackUkfImm_ConteinerCVCACTxz(detection) #инициал. трассы
+    track = estimator.BindTrackUkfImm_ConteinerCVCACTxz()
+    track.init(detection) #инициал. трассы
     
     X_c = np.empty((6, 0))
     m_i = np.empty((0, 3))
@@ -237,11 +239,11 @@ def estimate (Z):
         um_meas = Z[2,i]
         meas = ([[r_meas],[az_meas],[um_meas]])
 
-        detection.point = meas
-        detection.timePoint = (i * dt) + dt
+        detection.measurement = meas
+        detection.time = (i * dt) + dt
         
         if np.all(Z[:,i] == 0):
-            X = track.step(detection.timePoint)
+            X = track.step(detection.time)
             X_c = np.append(X_c,X,axis=1)
             continue
         # print('Z=',Zsph2cart(Z[:,i]))

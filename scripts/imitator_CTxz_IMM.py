@@ -179,10 +179,12 @@ def estimate (Z):
     
     meas = np.array([[r_meas],[az_meas],[um_meas]])
 
-    detection.point = meas
-    detection.timePoint = dt
+    detection.measurement = meas
+    detection.time = dt
+    detection.measurementNoise = R
    
-    track = estimator.BindTrackUkfImm_ConteinerCVCACTxz(detection) #инициал. трассы
+    track = estimator.BindTrackUkfImm_ConteinerCVCACTxz()
+    track.init(detection) #инициал. трассы
     
     X_c = np.empty((6, 0))
     m_i = np.empty((0, 3))

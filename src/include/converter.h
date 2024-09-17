@@ -3,7 +3,8 @@
 #include "keyMap.h"
 #include <functional>
 #include <vector>
-// #include <Eigen/Sparse>
+#include <Eigen/Sparse>
+
 template <class M>
 struct Converter
 {
@@ -11,6 +12,7 @@ struct Converter
     FuncConstAcceleration<M> modelCa;
     FuncConstTurnXZ<M> modelCtXz;
     FuncConstTurnXY<M> modelCtXy;
+    FuncBalreentry<M> modelBal;
     using SpMat = Eigen::SparseMatrix<double>;
     using T = Eigen::Triplet<double>;
 
@@ -22,6 +24,10 @@ struct Converter
         SpMat HVelTurn(6, 7);
         SpMat HVelAcc(6, 9);
         SpMat HTurnAcc(7, 9);
+        SpMat HBalAcc(7,9);
+        SpMat HVelBal(6,7);
+        SpMat HTurnBal(7,7);
+       
         std::vector<T> tripletList;
         tripletList.reserve(6);
         tripletList.push_back(T(0, 0, 1.0)); // использовать POS_X и т.д
@@ -31,6 +37,8 @@ struct Converter
         tripletList.push_back(T(4, 4, 1.0));
         tripletList.push_back(T(5, 5, 1.0));
         HVelTurn.setFromTriplets(tripletList.begin(), tripletList.end());
+        HVelBal.setFromTriplets(tripletList.begin(), tripletList.end());
+        HTurnBal.setFromTriplets(tripletList.begin(), tripletList.end());
         tripletList.clear();
 
         tripletList.push_back(T(0, 0, 1.0));
@@ -41,7 +49,9 @@ struct Converter
         tripletList.push_back(T(5, 7, 1.0));
         HVelAcc.setFromTriplets(tripletList.begin(), tripletList.end());
         HTurnAcc.setFromTriplets(tripletList.begin(), tripletList.end());
+        HBalAcc.setFromTriplets(tripletList.begin(), tripletList.end());
         tripletList.clear();
+
 
         m[{typeid(modelCv), typeid(modelCv)}] = [](const M &matStateOrCov)
         {
@@ -70,6 +80,12 @@ struct Converter
         {
             return matStateOrCov;
         };
+        
+        m[{typeid(modelBal), typeid(modelBal)}] = [](const M &matStateOrCov)
+        {
+            return matStateOrCov;
+        };
+
 
         m[{typeid(modelCv), typeid(modelCtXy)}] = [HVelTurn](const M &matStateOrCov)
         {
@@ -177,6 +193,7 @@ struct Converter
             res = HTurnAcc * matStateOrCov * HTurnAcc.transpose();
             return res;
         };
+
         m[{typeid(modelCa), typeid(modelCtXz)}] = [HTurnAcc](const M &matStateOrCov)
         {
             M res;
@@ -188,5 +205,115 @@ struct Converter
             res = HTurnAcc * matStateOrCov * HTurnAcc.transpose();
             return res;
         };
+
+
+
+
+
+        m[{typeid(modelCv), typeid(modelBal)}] = [HVelBal](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HVelBal.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HVelBal.transpose() * matStateOrCov * HVelBal;
+            return res;
+        };
+
+
+
+
+        m[{typeid(modelBal), typeid(modelCv)}] = [HVelBal](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HVelBal * matStateOrCov;
+                return res;
+            }
+            res = HVelBal * matStateOrCov * HVelBal.transpose();
+            return res;
+        };
+
+
+
+        m[{typeid(modelBal), typeid(modelCa)}] = [HBalAcc](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HBalAcc.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HBalAcc.transpose() * matStateOrCov * HBalAcc;
+            return res;
+        };
+
+
+        m[{typeid(modelCa), typeid(modelBal)}] = [HBalAcc](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HBalAcc * matStateOrCov;
+                return res;
+            }
+            res = HBalAcc * matStateOrCov * HBalAcc.transpose();
+            return res;
+        };
+
+
+        m[{typeid(modelCtXy), typeid(modelBal)}] = [HTurnBal](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HTurnBal.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HTurnBal.transpose() * matStateOrCov * HTurnBal;
+            return res;
+        };
+
+
+        m[{typeid(modelBal), typeid(modelCtXy)}] = [HTurnBal](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HTurnBal.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HTurnBal.transpose() * matStateOrCov * HTurnBal;
+            return res;
+        };
+
+
+        m[{typeid(modelCtXz), typeid(modelBal)}] = [HTurnBal](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HTurnBal.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HTurnBal.transpose() * matStateOrCov * HTurnBal;
+            return res;
+        };
+
+        m[{typeid(modelBal), typeid(modelCtXz)}] = [HTurnBal](const M &matStateOrCov)
+        {
+            M res;
+            if (matStateOrCov.cols() == 1)
+            {
+                res = HTurnBal.transpose() * matStateOrCov;
+                return res;
+            }
+            res = HTurnBal.transpose() * matStateOrCov * HTurnBal;
+            return res;
+        };
+
     }
 };

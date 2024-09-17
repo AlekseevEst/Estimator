@@ -32,23 +32,15 @@ struct ParamSigmaPoints
     double kappa;
 };
 
-// template<class M>
-// struct Detection
-// {
-//     double timePoint;
-//     M point;
-//     //M SKO_measurement;
-// };
-
-// template <class M>
-// struct Detection {
-//     double time;
-//     M measurement;
-//     M measurementNoise;
-//     struct DetectionParams {
-//         /*
-//             ....
-//         */
-//     };
-//     DetectionParams params;
-// };
+template <class M>
+struct Detection {
+    double time;
+    M measurement;
+    M measurementNoise;
+    // struct DetectionParams {
+    //     /*
+    //         ....
+    //     */
+    // };
+    // DetectionParams params;
+};

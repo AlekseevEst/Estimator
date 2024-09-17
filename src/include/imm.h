@@ -1,166 +1,124 @@
 #pragma once
 #include <iostream>
-#include "ukf.h"
 #include "converter.h"
-#include "conteiner.h"
 #include "ifilter.h"
+#include "immMath.h"
 
-template <class M, template <typename> class ConteinerType>
-struct Imm
+template <class M,
+          class TypeInitialization> 
+struct IMM
+    : public IFilter<M>
 {
-    ConteinerType<M> conteiner;
-    Converter<M> converter;
-    
-    M mu_i; // Вероятности режима i
-    M p_ij;   // переходная вероятность режима из i в j
-    M mu_ij; //смешенная вероятность
-    M cj;
-    
-    Imm(const M& modeProbability, const M& transmitProbability, const ConteinerType<M>& conteiner):
-    conteiner(conteiner), mu_i(modeProbability), p_ij(transmitProbability) {}
-
-    M step(const M& Z ,double dt)
+    std::pair<M, M> predict(double dt) override final
     {
-        mu_ij = computeMixingProbability(p_ij, mu_i);
-        std::pair<std::vector<M>,std::vector<M>> stateCovInit = InitMixingStateAndCovariance (mu_ij);
+        math.computeMixingProbability(p_ij, mu_i, mu_ij, cj);
 
-        filterStep(Z, stateCovInit,dt);
-        updateModeProbability(Z, cj);
-        return combinationModelCondition();
+        math.MixingStateAndCovariance(mu_ij, stateMixed, covarianceMixed, initializator.filters, converter);
 
+        for (size_t i = 0; i < initializator.filters.size(); ++i)
+            {
+                initializator.filters[i]->setCorrectInfo(stateMixed[i],covarianceMixed[i]);
+                initializator.filters[i]->predict(dt);
+                mu_i(0, i) = cj(0, i);
+            }
+
+        return math.combinationModelsCondition(mu_i, predictInfo.Xe, predictInfo.Pe, initializator.filters, converter);
     }
-    M step(double dt)
+      
+    std::pair<M, M> correct(const M &Z) override final
     {
-        mu_ij = computeMixingProbability(p_ij, mu_i);
-        std::pair<std::vector<M>, std::vector<M>> stateCovInit = InitMixingStateAndCovariance(mu_ij);
-        for (size_t i = 0; i < conteiner.filters.size(); ++i)
-        {   
-            conteiner.filters[i]->correctStruct.X = stateCovInit.first[i]; // допустим тут будет своп
-            conteiner.filters[i]->correctStruct.P = stateCovInit.second[i];
-    
-            conteiner.filters[i]->correctStruct.X = conteiner.filters[i]->predict(dt);
-            conteiner.filters[i]->correctStruct.P = conteiner.filters[i]->predictStruct.Pe;
-
-            mu_i(0, i) = cj(0, i);
+        for (size_t i = 0; i < initializator.filters.size(); ++i)
+        {
+            auto cor = initializator.filters[i]->correct(Z);
+            PRINTM(cor.first);
         }
 
-        return combinationModelCondition();
+        math.updateModeProbability(Z, cj, mu_i, initializator.filters);
+        return math.combinationModelsCondition(mu_i, correctInfo.X, correctInfo.P, initializator.filters, converter);
+    }
+    
+
+    double likelihood(/*...*/) override final
+    { //????
+
     }
 
-    M computeMixingProbability(const M &p_ij, const M &mu_i)
+    double distance(const M &Z) override final
     {
+        double totalDistance = 0.0;
+        for (size_t i = 0; i < initializator.filters.size(); ++i)
+        {
+        M v = Z - initializator.filters[i]->getPredictInfo().Ze;
+        double mahalonobisDistance = (v.transpose() * initializator.filters[i]->getPredictInfo().Se.inverse() * v)(0,0);
+        totalDistance += mahalonobisDistance * mu_i(0,i);
+        }
+        return totalDistance;
+    }
+
+    std::type_index getModelType() const override
+    {
+        //????
+    }
+
+    Correct<M> getCorrectInfo() override final {
+
+        return correctInfo;
+    }
+
+    Predict<M> getPredictInfo() override final {
+
+        return predictInfo;
+    }
+    void setCorrectInfo(const M& X, const M& P) override final
+    {
+        correctInfo.X = X;
+        correctInfo.P = P;
+    }
+
+    IMM()
+    {
+        mu_i.resize(1, initializator.filters.size());
+        p_ij.resize(initializator.filters.size(),initializator.filters.size());
+        mu_ij.resize(p_ij.rows(),p_ij.cols());
         cj.resize(1, mu_i.cols());
+        stateMixed.resize(initializator.filters.size());
+        covarianceMixed.resize(initializator.filters.size());
 
-        for (long int j = 0; j < mu_i.cols(); j++)
+        correctInfo.X.resize(initializator.filterCV->correctInfo.X.rows(), initializator.filterCV->correctInfo.X.cols());
+        correctInfo.P.resize(correctInfo.X.rows(), correctInfo.X.rows());
+        predictInfo.Xe.resize(initializator.filterCV->correctInfo.X.rows(), initializator.filterCV->correctInfo.X.cols());
+        predictInfo.Pe.resize(correctInfo.X.rows(), correctInfo.X.rows());
+
+
+        for (size_t i = 0; i < initializator.filters.size(); ++i)
         {
-            double c = 0.;
-            for (long int i = 0; i < p_ij.cols(); i++)
-            {
-                c +=(p_ij(i, j) * mu_i(0, i));
-            }
-            cj(0, j) = c;
-        }
+            stateMixed[i].resize(initializator.filters[i]->getCorrectInfo().X.rows(),initializator.filters[i]->getCorrectInfo().X.cols());
+            covarianceMixed[i].resize(stateMixed[i].rows(),stateMixed[i].rows());
+        }    
 
-        M mix(p_ij.rows(), p_ij.cols());
-
-        for (long int j = 0; j < p_ij.cols(); j++)
-        {
-            for (long int i = 0; i < p_ij.rows(); i++)
-            {
-                mix(i, j) = p_ij(i, j) * mu_i(0, i) / cj(0, j);
-            }
-        }
-        return mix;
     }
 
-       std::pair<std::vector<M>, std::vector<M>> InitMixingStateAndCovariance(const M &mu_ij)
+    template <class... TypeArgs>
+    void Initialization(TypeArgs... args)
     {
-        std::vector<M> statesOfFilters;
-        std::vector<M> covarianceOfFilters;
-
-        for (size_t j = 0; j < conteiner.filters.size(); ++j)
-        {
-            M mixedState = M::Zero(conteiner.filters[j]->correctStruct.X.rows(), conteiner.filters[j]->correctStruct.X.cols());
-            M mixedCovariance = M::Zero(conteiner.filters[j]->correctStruct.P.rows(), conteiner.filters[j]->correctStruct.P.cols());
-
-            for (size_t i = 0; i < conteiner.filters.size(); ++i)
-            {
-                M convertedState = converter.m[{conteiner.filters[i]->getModelType(),conteiner.filters[j]->getModelType()}](conteiner.filters[i]->correctStruct.X);
-                mixedState += mu_ij(i, j) * convertedState;
-            }
-                statesOfFilters.push_back(mixedState);
-
-            for (size_t i = 0; i < conteiner.filters.size(); ++i)
-            {
-                M convertedState = converter.m[{conteiner.filters[i]->getModelType(),conteiner.filters[j]->getModelType()}](conteiner.filters[i]->correctStruct.X);
-                M dX = convertedState - mixedState;
-                M convertedCovariance = converter.m[{conteiner.filters[i]->getModelType(),conteiner.filters[j]->getModelType()}](conteiner.filters[i]->correctStruct.P);
-                mixedCovariance += mu_ij(i, j) * (convertedCovariance + dX * dX.transpose());
-            }
-                        
-            covarianceOfFilters.push_back(mixedCovariance);
-        }
-
-        return std::make_pair(statesOfFilters, covarianceOfFilters);
+        initializator(*this, args...);
     }
+    M mu_ij; // смешенная вероятность
+    M mu_i; // Вероятности режима i
+    M p_ij; // переходная вероятность режима из i в j
+    Predict<M> predictInfo;
+    Correct<M> correctInfo;
 
-    void filterStep(const M &Z, std::pair<std::vector<M>, std::vector<M>> &stateCov, double dt)
-    {
-        for (size_t i = 0; i < conteiner.filters.size(); ++i)
-        {
+    std::vector<M> stateMixed;
+    std::vector<M> covarianceMixed;
+    TypeInitialization initializator;
+private:
 
-            conteiner.filters[i]->correctStruct.X = stateCov.first[i];
-            conteiner.filters[i]->correctStruct.P = stateCov.second[i];
+    ImmMath<M> math;
+    Converter<M> converter;
 
-            conteiner.filters[i]->predict(dt);
-            conteiner.filters[i]->correct(Z);
-        }
-    }
+   
+    M cj;
 
-    double likelihoodFunction(const M &Z, const M &Ze, const M &Se)
-    {
-        double n = Z.rows();
-        M v = Z - Ze;
-        long double power = -0.5 * (v.transpose() * Se.inverse() * v)(0, 0);
-        long double probability = std::pow((1 / (2 * M_PI)), n / 2.0) / std::sqrt(Se.determinant()) * std::exp(power);
 
-        return probability;
-    }
-
-    void updateModeProbability(const M &Z, const M &cj)
-    {
-        long double c = 0.0;
-        for (size_t i = 0; i < conteiner.filters.size(); ++i)
-        {
-            mu_i(0, i) = likelihoodFunction(Z, conteiner.filters[i]->predictStruct.Ze, conteiner.filters[i]->predictStruct.Se) * cj(0, i);
-            c += mu_i(0, i);
-        }
-
-        for (size_t i = 0; i < conteiner.filters.size(); ++i)
-        {
-            mu_i(0, i) /= c;
-        }
-
-    }
-
-    M combinationModelCondition() // сейчас возвращаяется модель CV
-    {
-        M X = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());
-        M dx = M::Zero(conteiner.filters[0]->correctStruct.X.rows(), conteiner.filters[0]->correctStruct.X.cols());
-        M P = M::Zero(conteiner.filters[0]->correctStruct.P.rows(), conteiner.filters[0]->correctStruct.P.cols());
-
-        for (size_t i = 0; i < conteiner.filters.size(); ++i)
-        {
-            M convertedState = converter.m[{conteiner.filters[i]->getModelType(), typeid(converter.modelCv)}](conteiner.filters[i]->correctStruct.X);
-            X += mu_i(0, i) * convertedState;
-        }
-
-        for (size_t i = 0; i < conteiner.filters.size(); ++i)
-        {
-            dx = converter.m[{conteiner.filters[i]->getModelType(), typeid(converter.modelCv)}](conteiner.filters[i]->correctStruct.X) - X;
-            M convertedCovariance = converter.m[{conteiner.filters[i]->getModelType(), typeid(converter.modelCv)}](conteiner.filters[i]->correctStruct.P);
-            P += mu_i(0, i) * (convertedCovariance + dx * dx.transpose());
-        }
-        return X;
-    }
 };
