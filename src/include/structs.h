@@ -7,7 +7,7 @@ struct Predict
     M Pe;
     M Pzz;
     M Pxz;
-    M Se; 
+    M Se;
 
     M Ze;
     M K;

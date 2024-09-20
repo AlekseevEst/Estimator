@@ -9,7 +9,7 @@ struct IFilter
     virtual std::pair<M, M> correct(const M &Z) = 0;
 
 
-    virtual double likelihood(/*...*/) = 0;
+    virtual double likelihood(const M &Z) = 0;
     virtual double distance(const M &Z) = 0;
 
     virtual std::type_index getModelType() const = 0;

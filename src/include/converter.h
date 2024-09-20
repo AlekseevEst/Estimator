@@ -36,9 +36,7 @@ struct Converter
         tripletList.push_back(T(3, 3, 1.0));
         tripletList.push_back(T(4, 4, 1.0));
         tripletList.push_back(T(5, 5, 1.0));
-        HVelTurn.setFromTriplets(tripletList.begin(), tripletList.end());
-        HVelBal.setFromTriplets(tripletList.begin(), tripletList.end());
-        HTurnBal.setFromTriplets(tripletList.begin(), tripletList.end());
+        HVelTurn.setFromTriplets(tripletList.begin(), tripletList.end()); 
         tripletList.clear();
 
         tripletList.push_back(T(0, 0, 1.0));
@@ -49,9 +47,27 @@ struct Converter
         tripletList.push_back(T(5, 7, 1.0));
         HVelAcc.setFromTriplets(tripletList.begin(), tripletList.end());
         HTurnAcc.setFromTriplets(tripletList.begin(), tripletList.end());
+        tripletList.clear();
+
+
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 1, 1.0));
+        tripletList.push_back(T(2, 3, 1.0));
+        tripletList.push_back(T(3, 4, 1.0));
+        tripletList.push_back(T(5, 6, 1.0));
+        tripletList.push_back(T(6, 7, 1.0));
         HBalAcc.setFromTriplets(tripletList.begin(), tripletList.end());
         tripletList.clear();
 
+        tripletList.push_back(T(0, 0, 1.0));
+        tripletList.push_back(T(1, 1, 1.0));
+        tripletList.push_back(T(2, 2, 1.0));
+        tripletList.push_back(T(3, 3, 1.0));
+        tripletList.push_back(T(4, 5, 1.0));
+        tripletList.push_back(T(5, 6, 1.0));
+        HVelBal.setFromTriplets(tripletList.begin(), tripletList.end());
+        HTurnBal.setFromTriplets(tripletList.begin(), tripletList.end());
+        tripletList.clear();
 
         m[{typeid(modelCv), typeid(modelCv)}] = [](const M &matStateOrCov)
         {
@@ -207,9 +223,6 @@ struct Converter
         };
 
 
-
-
-
         m[{typeid(modelCv), typeid(modelBal)}] = [HVelBal](const M &matStateOrCov)
         {
             M res;
@@ -220,9 +233,8 @@ struct Converter
             }
             res = HVelBal.transpose() * matStateOrCov * HVelBal;
             return res;
+
         };
-
-
 
 
         m[{typeid(modelBal), typeid(modelCv)}] = [HVelBal](const M &matStateOrCov)
@@ -238,7 +250,6 @@ struct Converter
         };
 
 
-
         m[{typeid(modelBal), typeid(modelCa)}] = [HBalAcc](const M &matStateOrCov)
         {
             M res;
@@ -251,7 +262,6 @@ struct Converter
             return res;
         };
 
-
         m[{typeid(modelCa), typeid(modelBal)}] = [HBalAcc](const M &matStateOrCov)
         {
             M res;
@@ -263,7 +273,6 @@ struct Converter
             res = HBalAcc * matStateOrCov * HBalAcc.transpose();
             return res;
         };
-
 
         m[{typeid(modelCtXy), typeid(modelBal)}] = [HTurnBal](const M &matStateOrCov)
         {
@@ -283,10 +292,10 @@ struct Converter
             M res;
             if (matStateOrCov.cols() == 1)
             {
-                res = HTurnBal.transpose() * matStateOrCov;
+                res = HTurnBal * matStateOrCov;
                 return res;
             }
-            res = HTurnBal.transpose() * matStateOrCov * HTurnBal;
+            res = HTurnBal * matStateOrCov * HTurnBal.transpose();
             return res;
         };
 
@@ -308,10 +317,10 @@ struct Converter
             M res;
             if (matStateOrCov.cols() == 1)
             {
-                res = HTurnBal.transpose() * matStateOrCov;
+                res = HTurnBal * matStateOrCov;
                 return res;
             }
-            res = HTurnBal.transpose() * matStateOrCov * HTurnBal;
+            res = HTurnBal * matStateOrCov * HTurnBal.transpose();
             return res;
         };
 

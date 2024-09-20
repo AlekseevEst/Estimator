@@ -21,7 +21,7 @@ struct UnscentedKalmanFilterMath
 
     void compute_sigma_points(const M &X, const M &P, const double &lamda, M &Xu, M &U)
     {
-        U = sqrt(lamda + X.rows()) * Utils<M>::sqrtMatSpectral(P);
+        U = sqrt(lamda + X.rows()) * /*Utils<M>::sqrtMat(P);*/Utils<M>::sqrtMatSpectral(P);
 
         Xu.col(0) = X;
 
@@ -34,6 +34,11 @@ struct UnscentedKalmanFilterMath
             Xu.col(i + X.rows() + 1) = X - U.col(i);
         }
     }
+
+    // void sigma_points_ipml(){
+
+    // }
+
 
     void doExtrapolatedStateVector(const M &Xue, M &Xe, const std::vector<double>& Wm)
     {
@@ -53,12 +58,10 @@ struct UnscentedKalmanFilterMath
         Pe.setZero();
         for (int i = 0; i < Xue.cols(); i++)
         {
-          
             Pe += Wc[i] * ((Xue.col(i) - Xe) * (Xue.col(i) - Xe).transpose());
         }
-
-        Pe += G * Q * G.transpose();
-   
+        // PRINTM(G * Q * G.transpose());
+        Pe += G * Q * G.transpose();   
     }
 
     void doExtrapolatedMeasVector(const M &Zue, M &Ze, const std::vector<double>& Wm)

@@ -3,7 +3,7 @@
 option(ESTIMATOR_ADD_TESTS "Add estimator tests to CTest" ON)
 
 #### Добавление исполняемого файла ...#####################################
-set(sources_list_test test.cpp test_SOLID.cpp test_distance.cpp test_ukf.cpp test_angle.cpp test_sparseMatrix.cpp test_map.cpp test_unordered_map_converter.cpp test_imm.cpp test_mixingProb.cpp choleckiy.cpp SQRTeigenvalue.cpp)
+set(sources_list_test test.cpp test_SOLID.cpp test_distance.cpp test_immPY.cpp test_ukf.cpp test_angle.cpp test_sparseMatrix.cpp test_map.cpp test_unordered_map_converter.cpp test_imm.cpp test_mixingProb.cpp choleckiy.cpp SQRTeigenvalue.cpp)
 add_executable(estimator_unit_tests ${sources_list_test})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)

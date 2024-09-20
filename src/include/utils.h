@@ -1,15 +1,19 @@
 #pragma once
 #include "Eigen/Dense"
 #include <iostream>
+#include <iomanip>
 #include "structs.h"
 
 #define ENUM_TO_INT(x) static_cast<int>(x)
-#define PRINTM(x) std::cerr << #x << std::endl << x << std::endl<< __FILE__ << ":" << __LINE__ << std::endl << std::endl
+static Eigen::IOFormat customFormat(10, 0, "\t", "\n", "[", "]", "[", "]");
+#define PRECISION 6
+#define PRINTM(x) std::cerr << #x << std::endl <<std::fixed<<std::setprecision(PRECISION) << x << std::endl<< __FILE__ << ":" << __LINE__ << std::endl << std::endl
+#define PRINT(x) std::cerr << #x << std::endl <<std::fixed<<std::setprecision(PRECISION)<< x << std::endl<< __FILE__ << ":" << __LINE__ << std::endl << std::endl
+
 template <class M> 
 class Utils
 {
 public:
-
     static M rot_Z(const double &val);
     static M rot_Y(const double &val);
     static std::pair<M, M> sph2cartcov(const M &sphCov, const M& Z);

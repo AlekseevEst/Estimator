@@ -189,7 +189,6 @@ struct FuncConstAcceleration
 
             Xue.col(i) = F * Xu.col(i);
         }
-        // PRINTM(Xue);
         return Xue;
     }
     int getSize()
@@ -235,7 +234,6 @@ struct FuncBalreentry
         double coef = 1e-4;     
 
         M stateCol = Xu;
-        PRINTM(stateCol);
         for (int i = 0; i < numCols; i++)
         {
             stateCol(pz, i) = stateCol(pz, i) + R0;
@@ -255,7 +253,6 @@ struct FuncBalreentry
             out(pz, i) = stateCol(pz, i) + T * stateCol(pvz, i) + dt2 * (D * stateCol(pvz, i) + G * stateCol(pz, i)) - R0;// + dt2 * wcol(xyz + 1, i);
             out(pvz, i) = stateCol(pvz, i) + T * (D * stateCol(pvz, i) + G * stateCol(pz, i));// + adt * wcol(xyz + 1, i);
         }
-        PRINTM(out);
         return out;
     }
         int getSize()
@@ -552,47 +549,7 @@ struct FuncControlMatrix_XvXYvYZvZW
     }
 };
 
-template <class M>
-struct FuncControlMatrix_XvXYvYZvZBal
-{
-    enum class Bal
-    {
-        POS_X = 0,
-        POS_VX,
-        POS_Y,
-        POS_VY,
-        POS_Z,
-        POS_VZ,
-        POS_BALCOEFF,
-        SIZE
-    };
-    enum class Pos
-    {
-        X = 0,
-        Y,
-        Z,
-        OMEGA,
-        SIZE
-    };
 
-    M operator()(double T)
-    {
-        M G(ENUM_TO_INT(Bal::SIZE), ENUM_TO_INT(Pos::SIZE));
-        G << (T * T) / 2.0, 0.0, 0.0, 0.0,
-            T, 0.0, 0.0, 0.0,
-            0.0, (T * T) / 2.0, 0.0, 0.0,
-            0.0, T, 0.0, 0.0,
-            0.0, 0.0, (T * T) / 2.0, 0.0,
-            0.0, 0.0, T, 0.0,
-            0.0, 0.0, 0.0, T;
-        return G;
-    }
-
-    std::pair<int, int> getSize()
-    {
-        return std::make_pair(ENUM_TO_INT(Bal::SIZE), ENUM_TO_INT(Pos::SIZE));
-    }
-};
 
 template <class M>
 struct FuncControlMatrix_XvXaXYvYaYZvZaZ
@@ -639,7 +596,47 @@ struct FuncControlMatrix_XvXaXYvYaYZvZaZ
     
 };
 
+template <class M>
+struct FuncControlMatrix_XvXYvYZvZBal
+{
+    enum class Bal
+    {
+        POS_X = 0,
+        POS_VX,
+        POS_Y,
+        POS_VY,
+        POS_Z,
+        POS_VZ,
+        POS_BALCOEFF,
+        SIZE
+    };
+    enum class Pos
+    {
+        X = 0,
+        Y,
+        Z,
+        OMEGA,
+        SIZE
+    };
 
+    M operator()(double T)
+    {
+        M G(ENUM_TO_INT(Bal::SIZE), ENUM_TO_INT(Pos::SIZE));
+        G << (T * T) / 2.0, 0.0, 0.0, 0.0,
+            T, 0.0, 0.0, 0.0,
+            0.0, (T * T) / 2.0, 0.0, 0.0,
+            0.0, T, 0.0, 0.0,
+            0.0, 0.0, (T * T) / 2.0, 0.0,
+            0.0, 0.0, T, 0.0,
+            0.0, 0.0, 0.0, T;
+        return G;
+    }
+
+    std::pair<int, int> getSize()
+    {
+        return std::make_pair(ENUM_TO_INT(Bal::SIZE), ENUM_TO_INT(Pos::SIZE));
+    }
+};
 
 // template <class M>
 // M balreentry (const M& state,

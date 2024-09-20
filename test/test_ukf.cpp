@@ -1,156 +1,138 @@
+// #include <iostream>
 // #include <catch2/catch.hpp>
+// #include "imm.h"
 // #include "ukf.h"
+// #include "models.h"
+// // #include "ifilter.h"
+// // #include "initFilters.h"
 // using namespace Catch::Benchmark;
 
 
-// TEST_CASE("filtering_ukf_CT")
+// struct InitUnscentedKalmanFilterCVtest
 // {
-
-//     Eigen::MatrixXd X(7, 1);
-//     Eigen::MatrixXd Z(3, 1);
-//     Eigen::MatrixXd Q(4, 4);
-//     Eigen::MatrixXd R(3, 3);
-
-
-//     X << 9922.94637347, 0.0, 19978.67752417, 0.0, 9955.79978476, 0.0, 0.0;
-//     Z << 24544.6547, 63.6329241, 24.192866;                 
-
-//     Q << 10.0,0.0,0.0,0.0,
-//         0.0,10.0,0.0,0.0,
-//         0.0,0.0,1.0,0.0,
-//         0.0,0.0,0.0,1e-7;
-        
-//     R << 10000.0, 0.0, 0.0,
-//         0.0, pow((0.1/3),2), 0.0,
-//         0.0, 0.0, pow((0.1/3),2);
-
-
-//     double t = 0.25;
-
-//     Eigen::MatrixXd P = Utils<Eigen::MatrixXd>::do_cart_P0(Utils<Eigen::MatrixXd>::sph2cartcov(R, Z(0,0),Z(1,0),Z(2,0)),
-//                                                                                                                 X.rows());
+//     template <class M,
+//               class... TypeArgs>
+//     void operator()(UnscentedKalmanFilter<M, InitUnscentedKalmanFilterCVtest, TypeArgs...> &filter,
+//                     const M &meas,
+//                     const M &measNoise)
+//     {
+      
+//         filter.correctInfo.X << 20. ,2. ,20. ,2., 20.,2.;
 
 
 
-//     Eigen::MatrixXd expectedCorrectState(7,1);
-//     Eigen::MatrixXd expectedPredState(7,1);
-    
-//     expectedPredState << 9922.95, 0.0, 19978.7, 0.0, 9955.8, 0.0, 0.0;
-//     expectedCorrectState << 9933.22, 0.0, 20019.3, 0.0, 10035.2, 224.576, 0.0;
-    
-//     ParamSigmaPoints p;
-//     p.alpha = 1e-3;
-//     p.beta = 2;
-//     p.kappa = -4;
+//         filter.correctInfo.P << 1., 0, 0, 0, 0, 0,
+//                                 0, 1. ,0 ,0 ,0 ,0,
+//                                 0, 0, 1. ,0 , 0 ,0,
+//                                 0, 0, 0 ,1. , 0 ,0,
+//                                 0, 0, 0 ,0 , 1. ,0,
+//                                 0, 0, 0 ,0 , 0 ,1.;
 
-//     UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstTurn, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZW> ukf (X,P,Q,R,p);
-//     // std::cout<<ukf.predict();
-//     // std::cout<<ukf.correct(Z);
-//     // CHECK(ukf.predict(t).isApprox(expectedPredState,0.00001));
-//     // CHECK(ukf.correct(Z).isApprox(expectedCorrectState,0.00001));
+//             filter.Q.resize(3,3);
+//             filter.Q << 1.0, 0.0, 0.0,
+//                         0.0, 1.0, 0.0,
+//                         0.0, 0.0, 1.0;
 
-//     BENCHMARK("STEP"){
-//         ukf.predict(t);
-//         ukf.correct(Z);
-//     };
-// }
-// TEST_CASE("filtering_ukf_CV_with_Vr")
+//         filter.R = measNoise;
+
+//         filter.paramsSigmaPoints.alpha = 1e-3;
+//         filter.paramsSigmaPoints.beta = 2.0;
+//         filter.paramsSigmaPoints.kappa = 0.0;
+//     }
+// };
+
+
+
+// TEST_CASE("imm_Predict")
 // {
-
-//     Eigen::MatrixXd X(6, 1);
-//     Eigen::MatrixXd Z(4, 1);
-//     Eigen::MatrixXd Q(3, 3);
-//     Eigen::MatrixXd R(4, 4);
-//     X << 130000.6547, 0.0, 0.6329241, 0.0, 0.192866, 0.0;
-//     Z << 131200.1248, 0.5256113, 0.182648, 189.0;                 
-
-//     Q << 0.00001,        0.0,        0.0,
-//              0.0,    0.00001,        0.0,
-//              0.0,        0.0,        0.00001;
+//     Eigen::MatrixXd meas(3,1);
+//     Eigen::MatrixXd measNoise(3,3);
+//     measNoise << 1.,0,0,
+//                  0,1.,0,
+//                  0,0,1.;
  
-        
-//     R << 10000.0,         0.0,                0.0,          0.0,
-//              0.0,    pow((0.1/3),2),          0.0,          0.0,
-//              0.0,         0.0,           pow((0.1/3),2),    0.0,
-//              0.0,         0.0,                0.0,       pow(5.0 ,2);
 
-//     double t = 6.0;
 
-//     Eigen::MatrixXd P = Utils<Eigen::MatrixXd>::do_cart_P0(Utils<Eigen::MatrixXd>::sph2cartcov(R, Z(0,0),Z(1,0),Z(2,0)),
-//                                                                     X.rows());
+//     UnscentedKalmanFilter<Eigen::MatrixXd, InitUnscentedKalmanFilterCVtest, FuncConstVel<Eigen::MatrixXd>, FuncMeasSph<Eigen::MatrixXd>, FuncControlMatrix_XvXYvYZvZ<Eigen::MatrixXd>> ukf;
+//     ukf.Initialization(meas, measNoise);
+//     double dt = 0.2;
 
-//     Eigen::MatrixXd expectedCorrectState(6,1);
-//     Eigen::MatrixXd expectedPredState(6,1);
+
+
+//     Eigen::MatrixXd expectedXpred(6,1);
+//     expectedXpred << 20.4, 2., 20.4, 2., 20.4,  2.;
+
+//     Eigen::MatrixXd expectedPpred(6,6);
+//     expectedPpred <<1.04040000e+00,  2.04000000e-01,  2.43642889e-17,  4.56864242e-20, 4.96478152e-17,  5.21723947e-18,
+//                     2.04000000e-01,  1.04000000e+00, -1.10352854e-18, -2.15397832e-21, -2.24862598e-18, -2.36398293e-19,
+//                     2.43642201e-17, -1.10351257e-18,  1.04040000e+00,  2.04000000e-01, 4.96478152e-17,  5.21723947e-18,
+//                     4.56960271e-20, -2.15381345e-21,  2.04000000e-01,  1.04000000e+00, 9.30996657e-20,  9.68722481e-21,
+//                     4.96475978e-17, -2.24854928e-18,  4.96478095e-17,  9.31268867e-20, 1.04040000e+00,  2.04000000e-01,
+//                     5.21724996e-18, -2.36401479e-19,  5.21724996e-18,  9.69290242e-21, 2.04000000e-01,  1.04000000e+00;
+
+
+//     Eigen::MatrixXd expectedXcor(6,1);
+//     expectedXcor << 18.60054543,  1.64716577, 18.60054543,  1.64716577, 23.99389129,  2.70468457;
+//     Eigen::MatrixXd expectedPcor(6,6);
+//     expectedPcor << 0.3185912,  0.06246886, 0.11473142, 0.02249636, 0.07718949, 0.01513519,
+//                     0.06246886, 1.0122488,  0.02249636, 0.00441105, 0.01513519, 0.00296769,
+//                     0.11473142, 0.02249636, 0.3185912,  0.06246886, 0.07718949, 0.01513519,
+//                     0.02249636, 0.00441105, 0.06246886, 1.0122488,  0.01513519, 0.00296769,
+//                     0.07718949, 0.01513519, 0.07718949, 0.01513519, 0.35564801, 0.0697349, 
+//                     0.01513519, 0.00296769, 0.01513519, 0.00296769, 0.0697349, 1.01367351;                    
+
+
+//     auto pred = ukf.predict(dt);
+
+//     CHECK((pred.first - expectedXpred).norm() == Approx(0.0).margin(1e-2));
+//     bool condition = (pred.first - expectedXpred).norm() == Approx(0.0).margin(1e-2);
+//     if(!condition){
+//         PRINTM(pred.first.format(customFormat));
+//         PRINTM(expectedXpred.format(customFormat));
+//     }
+
+//     CHECK((pred.second - expectedPpred).norm() == Approx(0.0).margin(1e-2));
+//     condition = (pred.second - expectedPpred).norm() == Approx(0.0).margin(1e-2);
+//     if(!condition){
+//         PRINTM(pred.second.format(customFormat));
+//         PRINTM(expectedPpred.format(customFormat));
+//     }
+
+//     Eigen::MatrixXd Z (3,1);
+//     Z << 35.355, 45., 45.; 
     
-//     expectedPredState << 130001, 0.0, 0.6329, 0.0, 0.192866, 0.0;
-//     expectedCorrectState << 130324, 2.31721, 1192.58, 198.657, 414.418, 69.0373;
-    
-//     ParamSigmaPoints p;
-//     p.alpha = 1e-3;
-//     p.beta = 2;
-//     p.kappa = -3;
+//     auto cor = ukf.correct(Z);
 
-//     UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstVel, FuncMeasSphCVCT, FuncControlMatrix_XvXYvYZvZ> ukf (X,P,Q,R,p);
-//     // std::cout<<ukf.predict(t);
-//     // std::cout<<ukf.correct(Z);
-//     Eigen::MatrixXd predict = ukf.predict(t);
-//     Eigen::MatrixXd correct = ukf.correct(Z);
+//     CHECK((cor.first - expectedXcor).norm() == Approx(0.0).margin(1e-1));
+//     condition = (cor.first - expectedXcor).norm() == Approx(0.0).margin(1e-1);
+//     if(!condition){
+//         PRINTM(cor.first.format(customFormat));
+//         PRINTM(expectedXcor.format(customFormat));
+//     }
 
-//     // CHECK(predict.isApprox(expectedPredState,0.00001));
-//     // CHECK(correct.isApprox(expectedCorrectState,0.00001));
+//     CHECK((cor.second - expectedPcor).norm() == Approx(0.0).margin(1e-1));
+//     condition = (cor.second - expectedPcor).norm() == Approx(0.0).margin(1e-1);
+//     if(!condition){
+//         PRINTM(cor.second.format(customFormat));
+//         PRINTM(expectedPcor.format(customFormat));
+//     }
 
-//     BENCHMARK("STEP"){
-//         ukf.predict(t);
-//         ukf.correct(Z);
+
+//     double expectedlikelihood = 3.0182580264650036e-08;
+//     double likelihood = ukf.likelihood(Z);
+//     CHECK(likelihood - expectedlikelihood == Approx(0.0).margin(1e-10));
+//     condition = likelihood - expectedlikelihood == Approx(0.0).margin(1e-10);
+//     if(!condition){
+//         std::cout<< std::fixed<<std::setprecision(20)<< likelihood<<std::endl;;
+//         std::cout<< std::fixed<<std::setprecision(20)<< expectedlikelihood<<std::endl;;
+//     }
+
+//     BENCHMARK("Imm_predict"){
+//     auto pred = ukf.predict(dt);
+//     auto cor = ukf.correct(Z);
 //     };
+
 // }
-
-// TEST_CASE("filtering_ukf_CA")
-// {
-
-//     Eigen::MatrixXd X(9, 1);
-//     Eigen::MatrixXd Z(3, 1);
-//     Eigen::MatrixXd Q(3, 3);
-//     Eigen::MatrixXd R(3, 3);
-//     X <<  22506.5388, 0.0, 0.0,  8.01622656e-03, 0.0, 0.0,  6.29699009e+01, 0.0, 0.0;
-//     Z << 22408.2757, 1.55981886e-02, 6.24263741e+01;                 
-
-//     Q << 10.0,  0.0,    0.0,
-//           0.0,  10.0,   0.0,
-//          0.0,   0.0,    10.0;
-
-        
-//     R << 10000.0,           0.0,            0.0,
-//            0.0,        pow((0.1/3),2),      0.0,
-//            0.0,             0.0,        pow((0.1/3),2);
-
-
-//     double t = 1.0;
-
-//     Eigen::MatrixXd P = Utils<Eigen::MatrixXd>::do_cart_P0(Utils<Eigen::MatrixXd>::sph2cartcov(R, Z(0,0),Z(1,0),Z(2,0)),
-//                                                                     X.rows());
-//     Eigen::MatrixXd expectedCorrectState(9,1);
-//     Eigen::MatrixXd expectedPredState(9,1);
     
-//     expectedPredState << 22506.5, 0.0, 0.0, 0.00801623, 0.0, 0.0,  62.9699, 0.0, 0.0;
-//     expectedCorrectState << 22352.1, -125.877, -3.81446, 6.10151, 6.16124, 0.186704, 24419.3, 24627.1, 746.276;
-    
-//     ParamSigmaPoints p;
-//     p.alpha = 1e-3;
-//     p.beta = 2;
-//     p.kappa = -6;
 
-//     UnscentedKalmanfilter<Eigen::MatrixXd, FuncConstAcceleration, FuncMeasSphCA, FuncControlMatrix_XvXaXYvYaYZvZaZ> ukf (X,P,Q,R,p);
-//     // std::cout<<ukf.predict(t);
-//     // std::cout<<ukf.correct(Z);
-//     Eigen::MatrixXd predict = ukf.predict(t);
-//     Eigen::MatrixXd correct = ukf.correct(Z);
-
-//     // CHECK(predict.isApprox(expectedPredState,0.00001));
-//     // CHECK(correct.isApprox(expectedCorrectState,0.00001));
-
-//     BENCHMARK("STEP"){
-//         ukf.predict(t);
-//         ukf.correct(Z);
-//     };
-// }
+   

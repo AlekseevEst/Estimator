@@ -6,17 +6,7 @@ struct ImmMath{
 
     void computeMixingProbability(const M &p_ij, const M &mu_i, M &mu_ij, M &cj)
     {
-
-        for (long int j = 0; j < mu_i.cols(); j++)
-        {
-            double c = 0.;
-            for (long int i = 0; i < p_ij.cols(); i++)
-            {
-                c +=(p_ij(i, j) * mu_i(0, i));
-            }
-            cj(0, j) = c;
-        }
-
+        cj = mu_i * p_ij;
         for (long int j = 0; j < p_ij.cols(); j++)
         {
             for (long int i = 0; i < p_ij.rows(); i++)
@@ -36,8 +26,6 @@ struct ImmMath{
 
         for (size_t j = 0; j < filters.size(); ++j)
         {
-            // PRINTM(filters[j]->getCorrectInfo().X);
-            // PRINTM(filters[j]->getCorrectInfo().P); 
             for (size_t i = 0; i < filters.size(); ++i)
 
             {
@@ -54,15 +42,15 @@ struct ImmMath{
         }
     }
 
-    double likelihoodFunction(const M &Z, const M &Ze, const M &Se)
-    {
-        M v = Z - Ze;
-        long double power = -0.5 * (v.transpose() * Se.inverse() * v)(0, 0);
-        std::cout<<"power:"<<power<<std::endl;
-        long double probability = std::pow((1 / (2 * M_PI)), Z.rows() / 2.0) / std::sqrt(Se.determinant()) * std::exp(power);
-        std::cout<<"probability:"<<probability<<std::endl;
-        return probability;
-    }
+    // double likelihoodFunction(const M &Z, const M &Ze, const M &Se)
+    // {
+    //     M v = Z - Ze;
+    //     long double power = -0.5 * (v.transpose() * Se.inverse() * v)(0, 0);
+    //     // std::cout<<"power:"<<power<<std::endl;
+    //     long double probability = std::pow((1 / (2 * M_PI)), Z.rows() / 2.0) / std::sqrt(Se.determinant()) * std::exp(power);
+    //     // std::cout<<"probability:"<<probability<<std::endl;
+    //     return probability;
+    // }
 
     void updateModeProbability(const M &Z, const M &cj, M& mu_i, std::vector<std::shared_ptr<IFilter<M>>>& filters)
     {
@@ -70,7 +58,7 @@ struct ImmMath{
 
         for (size_t i = 0; i < filters.size(); ++i)
         {
-            mu_i(0, i) = likelihoodFunction(Z, filters[i]->getPredictInfo().Ze, filters[i]->getPredictInfo().Se) * cj(0, i);
+            mu_i(0, i) = filters[i]->likelihood(Z) * cj(0, i);
             c += mu_i(0, i);
         }
 
@@ -85,7 +73,6 @@ struct ImmMath{
     {
         X.setZero();
         P.setZero();
-        PRINTM(mu_i);
         for (size_t i = 0; i < filters.size(); ++i)
         {
             M convertedState = converter.m[{filters[i]->getModelType(), typeid(converter.modelCv)}](filters[i]->getCorrectInfo().X);

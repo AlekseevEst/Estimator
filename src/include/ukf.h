@@ -18,6 +18,7 @@ struct UnscentedKalmanFilter
     std::pair<M, M> predict(double dt) override final
     {
         UKfilterMath.compute_weights(paramsSigmaPoints, lamda, c, correctInfo.X.rows(), Wc, Wm);
+
         UKfilterMath.compute_sigma_points(correctInfo.X, correctInfo.P, lamda, sigmaVectors, U);
         extrapolatedStateSigmaVectors = stateFunc(sigmaVectors, dt);
         UKfilterMath.doExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictInfo.Xe, Wm);
@@ -43,10 +44,12 @@ struct UnscentedKalmanFilter
         return std::make_pair(correctInfo.X, correctInfo.P);
     }
 
-    double likelihood(/*...*/) override final
+    double likelihood(const M &Z) override final
     {
-
-        // Что должно быть здесь? функция правдоподобия высчитывается, вроде бы только в IMM алгоритме.
+        v = Z - predictInfo.Ze;
+        long double power = -0.5 * (v.transpose() * predictInfo.Se.inverse() * v)(0, 0);
+        long double probability = std::pow((1 / (2 * M_PI)), Z.rows() / 2.0) / std::sqrt(predictInfo.Se.determinant()) * std::exp(power);
+        return probability;
     }
 
     double distance(const M &Z) override final
