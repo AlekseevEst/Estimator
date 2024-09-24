@@ -30,7 +30,8 @@ struct Track
             double dt = detection.time - timePoint;
             timePoint = detection.time;
             auto Pred = estimator->predict(dt);
-            return estimator->correct(detection.measurement).first;
+            auto Cor = estimator->correct(detection.measurement);
+            return Cor.first;
         }
         catch (const std::runtime_error &e)
         {
@@ -52,6 +53,10 @@ struct Track
             std::cerr << e.what() << '\n';
             return M();
         }
+    }
+    M get_m_i()
+    {
+        return estimator->mu_i;
     }
 
 private:

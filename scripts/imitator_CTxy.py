@@ -10,7 +10,7 @@ import random
 import estimator
 from models import Target
 
-dt = 0.25
+dt = 1.0
 pd = 1.0
 
 R = np.diag([10000.0, (0.1/3)**2,(0.1/3)**2]) #дисперсии, в deg

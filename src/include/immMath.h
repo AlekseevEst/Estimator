@@ -42,16 +42,6 @@ struct ImmMath{
         }
     }
 
-    // double likelihoodFunction(const M &Z, const M &Ze, const M &Se)
-    // {
-    //     M v = Z - Ze;
-    //     long double power = -0.5 * (v.transpose() * Se.inverse() * v)(0, 0);
-    //     // std::cout<<"power:"<<power<<std::endl;
-    //     long double probability = std::pow((1 / (2 * M_PI)), Z.rows() / 2.0) / std::sqrt(Se.determinant()) * std::exp(power);
-    //     // std::cout<<"probability:"<<probability<<std::endl;
-    //     return probability;
-    // }
-
     void updateModeProbability(const M &Z, const M &cj, M& mu_i, std::vector<std::shared_ptr<IFilter<M>>>& filters)
     {
         long double c = 0.0;
@@ -75,14 +65,14 @@ struct ImmMath{
         P.setZero();
         for (size_t i = 0; i < filters.size(); ++i)
         {
-            M convertedState = converter.m[{filters[i]->getModelType(), typeid(converter.modelCv)}](filters[i]->getCorrectInfo().X);
+            M convertedState = converter.m[{filters[i]->getModelType(), filters[0]->getModelType()}](filters[i]->getCorrectInfo().X);
             X += mu_i(0, i) * convertedState;
         }
 
         for (size_t i = 0; i < filters.size(); ++i)
         {
-            M dx = converter.m[{filters[i]->getModelType(), typeid(converter.modelCv)}](filters[i]->getCorrectInfo().X) - X;
-            M convertedCovariance = converter.m[{filters[i]->getModelType(), typeid(converter.modelCv)}](filters[i]->getCorrectInfo().P);
+            M dx = converter.m[{filters[i]->getModelType(), filters[0]->getModelType()}](filters[i]->getCorrectInfo().X) - X;
+            M convertedCovariance = converter.m[{filters[i]->getModelType(), filters[0]->getModelType()}](filters[i]->getCorrectInfo().P);
             P += mu_i(0, i) * (convertedCovariance + dx * dx.transpose());
         }
 

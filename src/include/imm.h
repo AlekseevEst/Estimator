@@ -27,7 +27,6 @@ struct IMM
         for (size_t i = 0; i < initializator.filters.size(); ++i)
         {
             auto cor = initializator.filters[i]->correct(Z);
-            // initializator.filters[i]->likelihood();
         }
 
         math.updateModeProbability(Z, cj, mu_i, initializator.filters);

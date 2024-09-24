@@ -18,13 +18,11 @@ struct UnscentedKalmanFilter
     std::pair<M, M> predict(double dt) override final
     {
         UKfilterMath.compute_weights(paramsSigmaPoints, lamda, c, correctInfo.X.rows(), Wc, Wm);
-
         UKfilterMath.compute_sigma_points(correctInfo.X, correctInfo.P, lamda, sigmaVectors, U);
         extrapolatedStateSigmaVectors = stateFunc(sigmaVectors, dt);
         UKfilterMath.doExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictInfo.Xe, Wm);
         G = controlFunc(dt);
         UKfilterMath.doCovMatExtrapolatedStateVector(extrapolatedStateSigmaVectors, predictInfo.Xe, G, Q, predictInfo.Pe, Wc);
-
         correctInfo.X = predictInfo.Xe;  // Записываю в качестве скореектированных предсказанные значения. под вопросом! Нужно в track.step(dt)
         correctInfo.P = predictInfo.Pe;
 
@@ -40,7 +38,6 @@ struct UnscentedKalmanFilter
         UKfilterMath.calcGainFilter(extrapolatedStateSigmaVectors, predictInfo.Xe, extrapolatedMeasSigmaVectors, predictInfo.Ze, predictInfo.Se, predictInfo.Pxz, predictInfo.K, Wc);
         UKfilterMath.correctState(predictInfo.Xe, Z, predictInfo.Ze, predictInfo.K, correctInfo.X);
         UKfilterMath.correctCov(predictInfo.Pe, predictInfo.K, predictInfo.Se, correctInfo.P);
-
         return std::make_pair(correctInfo.X, correctInfo.P);
     }
 

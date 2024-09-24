@@ -74,7 +74,7 @@ def make_true (tg1):
         z1.append(state1['z'])
         vz1.append(state1['vz'])
 
-    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'w':20.})
+    tg1.init_state({'x':x1[-1], 'y':y1[-1], 'z':z1[-1], 'vx':vx1[-1],'vy':0.0,'vz':0.0,'w':18.})
 
     for i in range(nCt):
         state1 = tg1.CTxz(dt)
@@ -225,7 +225,7 @@ def estimate (Z):
     detection.time = dt
     detection.measurementNoise = R
    
-    track = estimator.BindTrackUkfImm_ConteinerCVCACTxz()
+    track = estimator.BindTrackUkfImm_CVCTxyCA()
     track.init(detection) #инициал. трассы
     
     X_c = np.empty((6, 0))

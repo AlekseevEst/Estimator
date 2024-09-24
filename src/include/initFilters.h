@@ -80,7 +80,7 @@ struct InitUnscentedKalmanFilterCT
         M omega(3, 3);
         omega << 0, 0, 0,
                  0, 0, 0,
-                 0, 0, 0;
+                 0, 0, pow(22.,2);
 
         filter.correctInfo.P = Hp.transpose() * posCov * Hp + Hv.transpose() * velCov * Hv + Hw.transpose() * omega * Hw;
 
@@ -129,14 +129,14 @@ struct InitUnscentedKalmanFilterCA
               0, 0, 0, 0, 0, 1, 0, 0, 0,
               0, 0, 0, 0, 0, 0, 0, 0, 1;
 
-        M AccelerationCov = M::Zero(3,9);
+        M AccelerationCov = M::Zero(3,3);
         AccelerationCov.diagonal() << pow(50,2), pow(50,2), pow(50,2);
 
         filter.correctInfo.P = Hp.transpose() * posCov * Hp + Hv.transpose() * velCov * Hv + Ha.transpose() * AccelerationCov * Ha;
 
 
         // filter.correctInfo.P = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measNoise, meas), filter.correctInfo.X.rows());
-
+        filter.Q.resize(3,3);
         filter.Q << 10.0, 0.0, 0.0,
                     0.0, 10.0, 0.0,
                     0.0, 0.0, 10.0;
@@ -228,7 +228,7 @@ struct InitImmFilter1
             M omega(3, 3);
             omega << 0, 0, 0,
                      0, 0, 0,
-                     0, 0, 0;
+                     0, 0, pow(22,2);
 
             filter.correctInfo.P = Hp.transpose() * posCov * Hp + Hv.transpose() * velCov * Hv + Hw.transpose() * omega * Hw;
 
@@ -276,10 +276,13 @@ struct InitImmFilter1
                 0, 0, 0, 0, 0, 1, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 1;
 
-            M AccelerationCov = M::Zero(3, 9);
+
+            M AccelerationCov = M::Zero(3, 3);
             AccelerationCov.diagonal() << pow(50, 2), pow(50, 2), pow(50, 2);
 
+
             filter.correctInfo.P = Hp.transpose() * posCov * Hp + Hv.transpose() * velCov * Hv + Ha.transpose() * AccelerationCov * Ha;
+
             // filter.correctInfo.P = Utils<M>::do_cart_P0(Utils<M>::sph2cartcov(measNoise, meas), filter.correctInfo.X.rows());
 
             filter.Q << 10.0, 0.0, 0.0,
@@ -319,7 +322,6 @@ struct InitImmFilter1
         filterCV->Initialization(meas, measNoise);
         filterCTxy->Initialization(meas,measNoise);
         filterCA->Initialization(meas,measNoise);
-
         filterIMM.mu_i << 1./3., 1./3., 1./3.;
         filterIMM.p_ij << 0.97, 0.015, 0.015,
                           0.015, 0.97, 0.015,

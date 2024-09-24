@@ -17,6 +17,7 @@ struct Correct
 {
     M X;
     M P;
+
 };
 
 struct Measurement
